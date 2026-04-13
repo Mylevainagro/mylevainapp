@@ -1,19 +1,61 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { useDemo } from "@/components/DemoProvider";
+import { supabase } from "@/lib/supabase/client";
 import { MODALITES_REF } from "@/lib/constants";
-import { DEMO_STATS, DEMO_OBSERVATIONS } from "@/lib/demo-data";
+import { DEMO_STATS, DEMO_VIGNOBLES } from "@/lib/demo-data";
 
-const VIGNOBLES = [
-  { id: "a1000000-0000-0000-0000-000000000001", nom: "Piotte", localisation: "Bordeaux", appellation: null, emoji: "🍇" },
-  { id: "a1000000-0000-0000-0000-000000000002", nom: "Pape Clément", localisation: "Pessac-Léognan", appellation: "Grand Cru Classé de Graves", emoji: "🏰" },
-];
+interface SiteDisplay {
+  id: string;
+  nom: string;
+  localisation: string | null;
+  type: string | null;
+  emoji: string;
+}
+
+const TYPE_EMOJI: Record<string, string> = {
+  chateau: "🏰", domaine: "🍇", exploitation: "🌾", ferme: "🏠", serre: "🌿",
+};
 
 export default function HomePage() {
   const { user, logout } = useAuth();
   const { isDemo } = useDemo();
+  const [mySites, setMySites] = useState<SiteDisplay[]>([]);
+
+  useEffect(() => {
+    if (isDemo) {
+      setMySites(DEMO_VIGNOBLES.map((v) => ({
+        id: v.id, nom: v.nom, localisation: v.localisation,
+        type: v.appellation, emoji: "🍇",
+      })));
+      return;
+    }
+    async function load() {
+      // Load both sites (new) and vignobles (legacy) and merge
+      const [sitesRes, vigRes] = await Promise.all([
+        supabase.from("sites").select("id, nom, type_site, localisation").eq("actif", true).order("nom"),
+        supabase.from("vignobles").select("id, nom, localisation, appellation").order("nom"),
+      ]);
+      const items: SiteDisplay[] = [];
+      for (const s of sitesRes.data ?? []) {
+        items.push({
+          id: s.id, nom: s.nom, localisation: s.localisation,
+          type: s.type_site, emoji: TYPE_EMOJI[s.type_site ?? ""] ?? "📍",
+        });
+      }
+      for (const v of vigRes.data ?? []) {
+        items.push({
+          id: v.id, nom: v.nom, localisation: v.localisation,
+          type: v.appellation, emoji: "🍇",
+        });
+      }
+      setMySites(items);
+    }
+    load();
+  }, [isDemo]);
 
   return (
     <div>
@@ -113,29 +155,41 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* Vignobles */}
-      <h2 className="text-lg font-bold text-gray-800 mb-3">Vignobles</h2>
-      <div className="space-y-3 mb-6">
-        {VIGNOBLES.map((v) => (
-          <Link
-            key={v.id}
-            href={`/vignobles/${v.id}`}
-            className="flex items-center gap-4 glass rounded-2xl p-4 active:scale-[0.98] transition-all"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-2xl shadow-sm">
-              {v.emoji}
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-gray-800">{v.nom}</div>
-              <div className="text-sm text-gray-500">{v.localisation}</div>
-              {v.appellation && (
-                <div className="text-xs text-amber-600 mt-0.5 font-medium">{v.appellation}</div>
-              )}
-            </div>
-            <div className="text-gray-300 text-lg">›</div>
-          </Link>
-        ))}
-      </div>
+      {/* Mes sites */}
+      <h2 className="text-lg font-bold text-gray-800 mb-3">Mes sites</h2>
+      {mySites.length === 0 ? (
+        <div className="glass rounded-2xl p-6 text-center mb-6">
+          <div className="text-3xl mb-2">🌱</div>
+          <p className="text-sm text-gray-500 mb-3">Aucun site configuré</p>
+          {user?.role === 'admin' && (
+            <Link href="/admin" className="text-sm text-emerald-600 font-medium hover:underline">
+              Créer un site dans Admin →
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3 mb-6">
+          {mySites.map((s) => (
+            <Link
+              key={s.id}
+              href={`/vignobles/${s.id}`}
+              className="flex items-center gap-4 glass rounded-2xl p-4 active:scale-[0.98] transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-2xl shadow-sm">
+                {s.emoji}
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-gray-800">{s.nom}</div>
+                <div className="text-sm text-gray-500">{s.localisation || "—"}</div>
+                {s.type && (
+                  <div className="text-xs text-amber-600 mt-0.5 font-medium">{s.type}</div>
+                )}
+              </div>
+              <div className="text-gray-300 text-lg">›</div>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Protocole résumé */}
       <h2 className="text-lg font-bold text-gray-800 mb-3">Protocole — 7 rangs</h2>
