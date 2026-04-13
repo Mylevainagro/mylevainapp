@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { MODALITES_REF } from "@/lib/constants";
+import { DernierTraitementCard } from "@/components/traitements/DernierTraitementCard";
 
 const VIGNOBLES_DATA: Record<string, { nom: string; localisation: string; parcelles: { id: string; nom: string }[] }> = {
   "a1000000-0000-0000-0000-000000000001": {
@@ -35,9 +36,12 @@ export default function VignoblePage() {
       <h2 className="text-lg font-semibold mb-3">Parcelles</h2>
       <div className="space-y-3 mb-6">
         {vignoble.parcelles.map((p) => (
-          <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="font-medium">{p.nom}</div>
-            <div className="text-xs text-gray-500 mt-1">7 rangs — Protocole MyLevain</div>
+          <div key={p.id} className="space-y-2">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="font-medium">{p.nom}</div>
+              <div className="text-xs text-gray-500 mt-1">7 rangs — Protocole MyLevain</div>
+            </div>
+            <DernierTraitementCard parcelleId={p.id} />
           </div>
         ))}
       </div>
@@ -68,6 +72,12 @@ export default function VignoblePage() {
         </Link>
         <Link href="/traitements/new" className="bg-[#8b5e3c] text-white rounded-xl p-3 text-center text-sm font-medium">
           💧 Traitement
+        </Link>
+        <Link href={`/vignobles/${id}/galerie`} className="bg-white text-[#2d5016] border border-[#2d5016] rounded-xl p-3 text-center text-sm font-medium">
+          📷 Galerie photos
+        </Link>
+        <Link href={`/vignobles/${id}/timeline`} className="bg-white text-[#2d5016] border border-[#2d5016] rounded-xl p-3 text-center text-sm font-medium">
+          📅 Timeline
         </Link>
       </div>
     </div>

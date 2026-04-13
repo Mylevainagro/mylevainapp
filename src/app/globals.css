@@ -3,20 +3,46 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #2d5016;
-  --color-primary-light: #4a7c28;
-  --color-accent: #8b5e3c;
-  --color-bg: #f8f6f0;
+  --color-primary: #059669;
+  --color-primary-dark: #047857;
+  --color-primary-light: #10b981;
+  --color-accent: #d97706;
+  --color-accent-light: #f59e0b;
+  --color-bg: #f8faf9;
   --color-card: #ffffff;
-  --color-text: #1a1a1a;
+  --color-text: #111827;
   --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --radius: 16px;
 }
 
 body {
-  background: var(--color-bg);
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8faf9 40%, #fffbeb 100%);
+  background-attachment: fixed;
   color: var(--color-text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  min-height: 100vh;
+}
+
+/* Modern card style */
+.card {
+  @apply bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-emerald-700 to-emerald-500 bg-clip-text text-transparent;
+}
+
+/* Primary button */
+.btn-primary {
+  @apply bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-emerald-200/50 hover:shadow-emerald-300/50 hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-50 transition-all active:scale-[0.98];
+}
+
+/* Secondary button */
+.btn-secondary {
+  @apply bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50 disabled:opacity-50 transition-all active:scale-[0.98];
 }
 
 /* Loader bar animation */
@@ -44,12 +70,12 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fadeIn {
-  animation: fadeIn 0.25s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
 /* Smooth transitions for interactive elements */
 button, a, select, input {
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 /* Active state for touch */
@@ -66,3 +92,36 @@ html {
 /* Hide scrollbar but keep functionality */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Drawer slide up (mobile) */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Drawer slide left (desktop) */
+@keyframes slideLeft {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-left {
+  animation: slideLeft 0.3s ease-out;
+}
+
+/* Glassmorphism effect */
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/40;
+}
+
+/* Subtle glow on focus */
+input:focus, select:focus, textarea:focus {
+  @apply ring-2 ring-emerald-500/20 border-emerald-400;
+}
+
+/* Safe area for bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

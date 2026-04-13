@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { EditModal } from "@/components/admin/EditModal";
 import { Toast } from "@/components/Toast";
@@ -12,19 +14,30 @@ interface Vignoble { id: string; nom: string; localisation: string; appellation:
 interface Parcelle { id: string; vignoble_id: string; nom: string; cepage: string | null; nb_rangs: number; }
 interface ModaliteRef { rang: number; modalite: string; description: string | null; surnageant_l: number; eau_l: number; volume_l: number; actif: boolean; }
 interface ConfigItem { cle: string; valeur: string; categorie: string; description: string | null; }
+interface AppUserItem { id: string; email: string; nom: string; role: string; approved: boolean; created_at: string; last_login: string | null; }
 
 export default function AdminPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [vignobles, setVignobles] = useState<Vignoble[]>([]);
   const [parcelles, setParcelles] = useState<Parcelle[]>([]);
   const [modalites, setModalites] = useState<ModaliteRef[]>([]);
   const [configs, setConfigs] = useState<ConfigItem[]>([]);
+  const [appUsers, setAppUsers] = useState<AppUserItem[]>([]);
   const [toast, setToast] = useState({ message: "", type: "success" as "success" | "error", visible: false });
   const hideToast = useCallback(() => setToast(t => ({ ...t, visible: false })), []);
 
   // Modal state
   const [modal, setModal] = useState<{ type: string; data: any } | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Admin guard — redirect non-admin users
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      router.push('/');
+    }
+  }, [user, router]);
 
   // ---- Chargement initial ----
   useEffect(() => {
@@ -39,6 +52,14 @@ export default function AdminPage() {
       if (p.data) setParcelles(p.data);
       if (m.data) setModalites(m.data);
       if (c.data) setConfigs(c.data);
+
+      // Load users
+      const usersRes = await fetch('/api/auth/users');
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        setAppUsers(usersData.users || []);
+      }
+
       setLoading(false);
     }
     load();
@@ -142,6 +163,39 @@ export default function AdminPage() {
     setModal(m => m ? { ...m, data: { ...m.data, [field]: value } } : null);
   }
 
+  // ---- User management ----
+  async function toggleUserApproval(userId: string, approved: boolean) {
+    const res = await fetch('/api/auth/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, approved }),
+    });
+    if (res.ok) {
+      setAppUsers(users => users.map(u => u.id === userId ? { ...u, approved } : u));
+      showToast(approved ? 'Utilisateur approuvé' : 'Accès révoqué');
+    } else {
+      showToast('Erreur', 'error');
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    if (!confirm('Supprimer cet utilisateur ?')) return;
+    const res = await fetch('/api/auth/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    if (res.ok) {
+      setAppUsers(users => users.filter(u => u.id !== userId));
+      showToast('Utilisateur supprimé');
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Erreur', 'error');
+    }
+  }
+
+  if (user?.role !== 'admin') return null;
+
   // ---- RENDER ----
   if (loading) return <div className="pt-4"><ListSkeleton count={4} /></div>;
 
@@ -149,7 +203,49 @@ export default function AdminPage() {
     <div className="space-y-4">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
 
-      <h1 className="text-xl font-bold text-[#2d5016]">⚙️ Administration</h1>
+      <h1 className="text-xl font-bold gradient-text">⚙️ Administration</h1>
+
+      {/* ---- UTILISATEURS ---- */}
+      <AdminCard title="👥 Gestion des utilisateurs">
+        {appUsers.map(u => (
+          <div key={u.id} className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                u.role === 'admin' ? 'bg-amber-100 text-amber-700' : u.approved ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {u.role === 'admin' ? '👑' : u.approved ? '✓' : '⏳'}
+              </div>
+              <div>
+                <div className="font-medium text-sm">{u.nom}</div>
+                <div className="text-xs text-gray-500">{u.email}</div>
+                <div className="text-[10px] text-gray-400">
+                  {u.role === 'admin' ? 'Administrateur' : u.approved ? 'Approuvé' : 'En attente'}
+                  {u.last_login && ` · Dernière connexion : ${new Date(u.last_login).toLocaleDateString('fr-FR')}`}
+                </div>
+              </div>
+            </div>
+            {u.role !== 'admin' && (
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => toggleUserApproval(u.id, !u.approved)}
+                  className={`text-xs px-2.5 py-1.5 rounded-lg active:scale-95 ${
+                    u.approved ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'
+                  }`}
+                >
+                  {u.approved ? '🚫 Révoquer' : '✅ Approuver'}
+                </button>
+                <button
+                  onClick={() => deleteUser(u.id)}
+                  className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg active:scale-95"
+                >
+                  🗑
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {appUsers.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun utilisateur</p>}
+      </AdminCard>
 
       {/* ---- VIGNOBLES ---- */}
       <AdminCard title="🏡 Vignobles" onAdd={() => setModal({ type: "vignoble", data: { nom: "", localisation: "", appellation: "", type_sol: "" } })}>

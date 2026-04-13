@@ -35,6 +35,8 @@ export default function NewTraitementPage() {
     load();
   }, []);
 
+  const currentYear = new Date().getFullYear().toString();
+
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({ message: "", type: "success", visible: false });
   const hideToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
@@ -50,6 +52,14 @@ export default function NewTraitementPage() {
   const [conditionsMeteo, setConditionsMeteo] = useState("");
   const [operateur, setOperateur] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Phase 2 — Champs enrichis (Exigence 7.1)
+  const [typeTraitement, setTypeTraitement] = useState("");
+  const [matiereActive, setMatiereActive] = useState("");
+  const [concentration, setConcentration] = useState<number | null>(null);
+  const [unite, setUnite] = useState("");
+  const [objectif, setObjectif] = useState("");
+  const [campagne, setCampagne] = useState(currentYear);
 
   const modaliteRef = rang > 0 ? modalitesList.find((m) => m.rang === rang) : null;
   const parcelles = vignoble ? parcellesList.filter(p => {
@@ -77,6 +87,12 @@ export default function NewTraitementPage() {
       conditions_meteo: conditionsMeteo || null,
       operateur: operateur || null,
       notes: notes || null,
+      type_traitement: typeTraitement || null,
+      matiere_active: matiereActive || null,
+      concentration,
+      unite: unite || null,
+      objectif: objectif || null,
+      campagne: campagne || null,
     });
     setSaving(false);
     if (error) {
@@ -119,6 +135,31 @@ export default function NewTraitementPage() {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Opérateur</label>
             <input type="text" value={operateur} onChange={(e) => setOperateur(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </Section>
+
+        <Section title="Conditions" icon="🌤️">
+
+        <Section title="Détails traitement" icon="🔬" defaultOpen={true}>
+          <SelectField label="Type de traitement" value={typeTraitement} onChange={setTypeTraitement} options={["cuivre", "soufre", "levain", "biocontrole", "phytosanitaire", "fertilisation", "autre"]} />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Matière active</label>
+            <input type="text" value={matiereActive} onChange={(e) => setMatiereActive(e.target.value)} placeholder="ex: hydroxyde de cuivre..." className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <NumberField label="Concentration" value={concentration} onChange={setConcentration} />
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Unité</label>
+              <input type="text" value={unite} onChange={(e) => setUnite(e.target.value)} placeholder="g/L, %, ..." className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Objectif</label>
+            <input type="text" value={objectif} onChange={(e) => setObjectif(e.target.value)} placeholder="ex: prévention mildiou..." className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Campagne</label>
+            <input type="text" value={campagne} onChange={(e) => setCampagne(e.target.value)} placeholder="ex: 2025" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </div>
         </Section>
 

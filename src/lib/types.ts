@@ -94,6 +94,12 @@ export interface Observation {
   taille_grappes: Note05 | null;
   homogeneite_grappes: Note05 | null;
 
+  // Rendement (Phase 2)
+  nombre_grappes: number | null;
+  poids_moyen_grappe: number | null;
+  rendement_estime: number | null;
+  rendement_reel: number | null;
+
   // Scores calculés
   score_plante: number | null;
   score_sanitaire: number | null;
@@ -118,6 +124,14 @@ export interface Traitement {
   operateur: string | null;
   notes: string | null;
   created_at: string;
+
+  // Champs enrichis (Phase 2)
+  type_traitement: 'cuivre' | 'soufre' | 'levain' | 'biocontrole' | 'phytosanitaire' | 'fertilisation' | 'autre' | null;
+  matiere_active: string | null;
+  concentration: number | null;
+  unite: string | null;
+  objectif: string | null;
+  campagne: string | null;
 }
 
 export interface AnalyseSol {
@@ -208,3 +222,197 @@ export interface ModaliteRef {
 
 // Pour le formulaire de saisie
 export type ObservationFormData = Omit<Observation, "id" | "created_at" | "score_plante" | "score_sanitaire">;
+
+// ============================================================
+// Phase 2 — Nouvelles interfaces
+// ============================================================
+
+// ---- Guide de notation (Exigence 1) ----
+
+export interface GuideNotation {
+  id: string;
+  code_indicateur: string;
+  nom_indicateur: string;
+  description: string;
+  pourquoi_mesurer: string;
+  methode_mesure: string;
+  points_attention: string;
+  echelle_type: 'numerique_0_5' | 'numerique_0_3' | 'pourcentage' | 'categoriel';
+  seuils_json: Record<string, string>;
+  exemple: string;
+  unite: string | null;
+  actif: boolean;
+  ordre_affichage: number;
+}
+
+// ---- Multi-cultures (Exigence 2) ----
+
+export interface TypeCulture {
+  id: string;
+  code: string;
+  nom: string;
+  description: string | null;
+  actif: boolean;
+}
+
+export interface Espece {
+  id: string;
+  type_culture_id: string;
+  code: string;
+  nom: string;
+  description: string | null;
+  actif: boolean;
+}
+
+export interface Variete {
+  id: string;
+  espece_id: string;
+  code: string;
+  nom: string;
+  description: string | null;
+  actif: boolean;
+}
+
+export interface Site {
+  id: string;
+  nom: string;
+  type_site: string;
+  localisation: string | null;
+  appellation: string | null;
+  description: string | null;
+  actif: boolean;
+}
+
+export interface ZoneCulture {
+  id: string;
+  site_id: string;
+  type_culture_id: string;
+  espece_id: string | null;
+  variete_id: string | null;
+  nom: string;
+  code: string | null;
+  surface_ha: number | null;
+  nb_lignes_ou_rangs: number | null;
+  type_sol: string | null;
+  irrigation: boolean | null;
+  mode_conduite: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  notes: string | null;
+  actif: boolean;
+}
+
+// ---- Export (Exigence 3) ----
+
+export interface ExportFilters {
+  site_id?: string;
+  zone_culture_id?: string;
+  campagne?: string;
+  date_debut?: string;
+  date_fin?: string;
+  modalite?: string;
+}
+
+export type ExportFormat = 'csv' | 'excel' | 'json';
+
+// ---- Validation complétude (Exigence 5) ----
+
+export interface CompletudeResult {
+  status: 'complete' | 'partial' | 'incomplete';
+  can_export: boolean;
+  missing_required: string[];
+  missing_recommended: string[];
+  message: string;
+}
+
+// ---- Rapport PDF (Exigence 4) ----
+
+export interface RapportConfig {
+  site_id: string;
+  zone_culture_id?: string;
+  campagne: string;
+  date_debut?: string;
+  date_fin?: string;
+}
+
+// ---- Import PDF labo (Exigence 6) ----
+
+export interface ParsedLaboValue {
+  champ: string;
+  valeur: number | null;
+  confiance: 'haute' | 'moyenne' | 'basse' | 'non_detecte';
+  valeur_brute?: string;
+}
+
+export interface ParsedLaboResult {
+  valeurs: ParsedLaboValue[];
+  texte_brut: string;
+  fichier_nom: string;
+}
+
+// ---- Météo Open-Meteo (Exigence 9) ----
+
+export interface MeteoActuelle {
+  temperature: number;
+  humidite: number;
+  precipitations: number;
+  vent_kmh: number;
+  description: string;
+}
+
+export interface PrevisionJour {
+  date: string;
+  temp_min: number;
+  temp_max: number;
+  precipitations: number;
+  description: string;
+}
+
+export interface MeteoData {
+  actuelle: MeteoActuelle;
+  previsions: PrevisionJour[];
+}
+
+// ---- Offline sync (Exigence 10) ----
+
+export interface PendingSync {
+  id: string;
+  type: 'observation' | 'traitement';
+  data: Record<string, unknown>;
+  created_at: string;
+  status: 'pending' | 'syncing' | 'error';
+}
+
+// ---- Résumé campagne (Exigence 7) ----
+
+export interface ResumeCampagne {
+  id: string;
+  zone_culture_id: string;
+  campagne: string;
+  nb_passages_cuivre: number;
+  nb_passages_total: number;
+  pression_mildiou_estimee: number | null;
+  pression_oidium_estimee: number | null;
+  incidents_sanitaires: string | null;
+  commentaire_general: string | null;
+}
+
+// ---- Timeline (Exigence 15) ----
+
+export interface TimelineEvent {
+  id: string;
+  type: 'observation' | 'traitement' | 'analyse_sol';
+  date: string;
+  titre: string;
+  resume: string;
+  icone: string;
+  couleur: string;
+}
+
+// ---- Validation formulaire (Exigence 11) ----
+
+export interface ValidationError {
+  champ: string;
+  message: string;
+  type: 'required' | 'range' | 'format';
+}

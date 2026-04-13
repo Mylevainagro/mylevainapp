@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Observation } from "@/lib/types";
 import { SelectField } from "@/components/ui/SelectField";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export default function ObservationsPage() {
+  const router = useRouter();
   const [observations, setObservations] = useState<Observation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterRang, setFilterRang] = useState("");
@@ -35,6 +37,21 @@ export default function ObservationsPage() {
   return (
     <div>
       <h1 className="text-xl font-bold text-[#2d5016] mb-4">📋 Historique</h1>
+
+      <div className="flex gap-3 mb-4">
+        <Link
+          href="/observations/new"
+          className="flex-1 bg-[#2d5016] text-white rounded-xl px-4 py-2.5 text-center text-sm font-medium"
+        >
+          📝 Nouvelle observation
+        </Link>
+        <Link
+          href="/observations/batch"
+          className="flex-1 bg-white text-[#2d5016] border border-[#2d5016] rounded-xl px-4 py-2.5 text-center text-sm font-medium"
+        >
+          📋 Saisie par lot
+        </Link>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <SelectField label="Rang" value={filterRang} onChange={setFilterRang} options={["1","2","3","4","5","6","7"]} placeholder="Tous" />
@@ -87,6 +104,18 @@ export default function ObservationsPage() {
               {obs.commentaires && (
                 <p className="text-xs text-gray-500 mt-2 line-clamp-2">{obs.commentaires}</p>
               )}
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/observations/new?duplicate=${obs.id}`);
+                  }}
+                  className="text-xs text-[#2d5016] font-medium px-2 py-1 rounded-lg hover:bg-[#2d5016]/10 transition-colors"
+                >
+                  📋 Dupliquer comme modèle
+                </button>
+              </div>
             </div>
           ))}
         </div>

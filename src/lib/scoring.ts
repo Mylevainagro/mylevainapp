@@ -53,6 +53,21 @@ export function calcScoreVigueur(obs: Partial<Observation>): number | null {
   return round(avg(vals));
 }
 
+/**
+ * Score rendement (0-5) — basé sur rendement_reel ou rendement_estime (kg/ha)
+ * Seuils viticulture : 0-2000=1, 2000-5000=2, 5000-8000=3, 8000-12000=4, >12000=5
+ */
+export function calcScoreRendement(obs: Partial<Observation>): number | null {
+  const val = obs.rendement_reel ?? obs.rendement_estime;
+  if (val == null) return null;
+  if (val <= 0) return 0;
+  if (val <= 2000) return 1;
+  if (val <= 5000) return 2;
+  if (val <= 8000) return 3;
+  if (val <= 12000) return 4;
+  return 5;
+}
+
 // ============================================================
 // SCORES SOL (analyses labo)
 // ============================================================
