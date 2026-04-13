@@ -173,8 +173,9 @@ export async function parsePDFLabo(file: File): Promise<ParsedLaboResult> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  // Dynamic import to avoid bundling issues in client-side code
-  const pdfParse = (await import('pdf-parse')).default;
+  // eslint-disable-next-line
+  const pdfParseModule = await import('pdf-parse') as any;
+  const pdfParse = pdfParseModule.default ?? pdfParseModule;
   const pdfData = await pdfParse(buffer);
 
   return parseLaboText(pdfData.text, file.name);

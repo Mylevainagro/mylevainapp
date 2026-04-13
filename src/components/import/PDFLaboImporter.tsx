@@ -135,10 +135,12 @@ export function PDFLaboImporter() {
     setEditedValues({});
 
     try {
-      // Read file as ArrayBuffer, extract text via pdf-parse
+      // Read file as text via pdf-parse
       const arrayBuffer = await selected.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const pdfParse = (await import("pdf-parse")).default;
+      // eslint-disable-next-line
+      const pdfParseModule = await import("pdf-parse") as any;
+      const pdfParse = pdfParseModule.default ?? pdfParseModule;
       const pdfData = await pdfParse(buffer);
       const parsed = parseLaboText(pdfData.text, selected.name);
       setResult(parsed);

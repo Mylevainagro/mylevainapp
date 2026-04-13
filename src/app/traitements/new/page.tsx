@@ -138,8 +138,6 @@ export default function NewTraitementPage() {
           </div>
         </Section>
 
-        <Section title="Conditions" icon="🌤️">
-
         <Section title="Détails traitement" icon="🔬" defaultOpen={true}>
           <SelectField label="Type de traitement" value={typeTraitement} onChange={setTypeTraitement} options={["cuivre", "soufre", "levain", "biocontrole", "phytosanitaire", "fertilisation", "autre"]} />
           <div className="flex flex-col gap-1">
