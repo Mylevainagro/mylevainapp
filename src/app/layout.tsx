@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { AuthGate } from "@/components/AuthGate";
+import { DemoProvider } from "@/components/DemoProvider";
+import { DemoToggle } from "@/components/DemoToggle";
 import { BottomNav } from "@/components/BottomNav";
 import { PageLoader } from "@/components/PageLoader";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
@@ -34,12 +36,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="pb-20 antialiased">
         <AuthProvider>
           <AuthGate>
-            <OfflineIndicator />
-            <PageLoader />
-            <main className="max-w-lg mx-auto px-4 pt-6 animate-fadeIn">
-              {children}
-            </main>
-            <BottomNav />
+            <DemoProvider>
+              <DemoToggle />
+              <OfflineIndicator />
+              <PageLoader />
+              <main className="max-w-lg mx-auto px-4 pt-6 animate-fadeIn">
+                {children}
+              </main>
+              <BottomNav />
+            </DemoProvider>
           </AuthGate>
         </AuthProvider>
       </body>

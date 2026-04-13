@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
+import { useDemo } from "@/components/DemoProvider";
 import { MODALITES_REF } from "@/lib/constants";
+import { DEMO_STATS, DEMO_OBSERVATIONS } from "@/lib/demo-data";
 
 const VIGNOBLES = [
   { id: "a1000000-0000-0000-0000-000000000001", nom: "Piotte", localisation: "Bordeaux", appellation: null, emoji: "🍇" },
@@ -11,6 +13,7 @@ const VIGNOBLES = [
 
 export default function HomePage() {
   const { user, logout } = useAuth();
+  const { isDemo } = useDemo();
 
   return (
     <div>
@@ -34,6 +37,47 @@ export default function HomePage() {
           </button>
         </div>
       </div>
+
+      {/* Demo stats dashboard */}
+      {isDemo && (
+        <div className="glass rounded-2xl p-4 mb-6 space-y-3">
+          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            📊 Tableau de bord — Campagne 2026
+            <span className="text-[10px] bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">DÉMO</span>
+          </h2>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-emerald-50 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-emerald-700">{DEMO_STATS.score_global}</div>
+              <div className="text-[10px] text-emerald-600 font-medium">Score global</div>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-blue-700">{DEMO_STATS.score_plante}</div>
+              <div className="text-[10px] text-blue-600 font-medium">Score plante</div>
+            </div>
+            <div className="bg-amber-50 rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-amber-700">{DEMO_STATS.score_sol}</div>
+              <div className="text-[10px] text-amber-600 font-medium">Score sol</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white/60 rounded-xl p-3">
+              <div className="text-xs text-gray-500">Rendement levain</div>
+              <div className="text-lg font-bold text-emerald-700">{DEMO_STATS.rendement_moyen_levain} <span className="text-xs font-normal">kg/ha</span></div>
+              <div className="text-xs text-emerald-600 font-medium">{DEMO_STATS.evolution_rendement} vs témoin</div>
+            </div>
+            <div className="bg-white/60 rounded-xl p-3">
+              <div className="text-xs text-gray-500">Rendement témoin</div>
+              <div className="text-lg font-bold text-gray-600">{DEMO_STATS.rendement_moyen_temoin} <span className="text-xs font-normal">kg/ha</span></div>
+              <div className="text-xs text-gray-400">référence</div>
+            </div>
+          </div>
+          <div className="flex gap-4 text-xs text-gray-500 pt-1">
+            <span>📝 {DEMO_STATS.nb_observations} observations</span>
+            <span>💧 {DEMO_STATS.nb_traitements} traitements</span>
+            <span>🧪 {DEMO_STATS.nb_analyses} analyses</span>
+          </div>
+        </div>
+      )}
 
       {/* Actions rapides */}
       <div className="grid grid-cols-2 gap-3 mb-6">

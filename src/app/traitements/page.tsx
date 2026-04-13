@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import { useDemo } from "@/components/DemoProvider";
+import { DEMO_TRAITEMENTS } from "@/lib/demo-data";
 import { Traitement } from "@/lib/types";
 import { ListSkeleton } from "@/components/Skeleton";
 import { SelectField } from "@/components/ui/SelectField";
@@ -15,12 +17,18 @@ const TYPE_TRAITEMENT_OPTIONS = [
 ] as const;
 
 export default function TraitementsPage() {
+  const { isDemo } = useDemo();
   const [traitements, setTraitements] = useState<Traitement[]>([]);
   const [loading, setLoading] = useState(true);
   const [campagneFilter, setCampagneFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
 
   useEffect(() => {
+    if (isDemo) {
+      setTraitements(DEMO_TRAITEMENTS);
+      setLoading(false);
+      return;
+    }
     async function load() {
       const { data, error } = await supabase
         .from("traitements")

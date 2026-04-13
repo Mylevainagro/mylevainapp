@@ -4,18 +4,26 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { useDemo } from "@/components/DemoProvider";
+import { DEMO_OBSERVATIONS } from "@/lib/demo-data";
 import { Observation } from "@/lib/types";
 import { SelectField } from "@/components/ui/SelectField";
 import { ListSkeleton } from "@/components/Skeleton";
 
 export default function ObservationsPage() {
   const router = useRouter();
+  const { isDemo } = useDemo();
   const [observations, setObservations] = useState<Observation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterRang, setFilterRang] = useState("");
   const [filterMois, setFilterMois] = useState("");
 
   useEffect(() => {
+    if (isDemo) {
+      setObservations(DEMO_OBSERVATIONS);
+      setLoading(false);
+      return;
+    }
     async function load() {
       const { data, error } = await supabase
         .from("observations")
