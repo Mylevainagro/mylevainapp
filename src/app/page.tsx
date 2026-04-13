@@ -29,7 +29,7 @@ export default function HomePage() {
     if (isDemo) {
       setMySites(DEMO_VIGNOBLES.map((v) => ({
         id: v.id, nom: v.nom, localisation: v.localisation,
-        type: v.appellation, emoji: "🍇",
+        type: v.appellation, emoji: TYPE_EMOJI[v.type_site ?? ""] ?? "📍",
       })));
       return;
     }
@@ -117,6 +117,10 @@ export default function HomePage() {
             <span>📝 {DEMO_STATS.nb_observations} observations</span>
             <span>💧 {DEMO_STATS.nb_traitements} traitements</span>
             <span>🧪 {DEMO_STATS.nb_analyses} analyses</span>
+          </div>
+          <div className="flex gap-4 text-xs text-gray-400">
+            <span>📍 {DEMO_STATS.nb_sites} sites</span>
+            <span>🌱 {DEMO_STATS.nb_cultures} types de culture</span>
           </div>
         </div>
       )}

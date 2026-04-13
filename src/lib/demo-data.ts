@@ -5,17 +5,23 @@
 
 import type { Observation, Traitement, AnalyseSol, Modalite } from './types';
 
-// ---- Vignobles & Parcelles ----
+// ---- Vignobles & Parcelles (viticulture) ----
 
 export const DEMO_VIGNOBLES = [
-  { id: 'demo-v1', nom: 'Château Piotte', localisation: 'Saint-Émilion', appellation: 'Saint-Émilion Grand Cru', type_sol: 'Argilo-calcaire' },
-  { id: 'demo-v2', nom: 'Domaine Pape Clément', localisation: 'Pessac-Léognan', appellation: 'Grand Cru Classé de Graves', type_sol: 'Graves profondes' },
+  { id: 'demo-v1', nom: 'Château Piotte', localisation: 'Saint-Émilion', appellation: 'Saint-Émilion Grand Cru', type_sol: 'Argilo-calcaire', type_site: 'chateau' },
+  { id: 'demo-v2', nom: 'Domaine Pape Clément', localisation: 'Pessac-Léognan', appellation: 'Grand Cru Classé de Graves', type_sol: 'Graves profondes', type_site: 'domaine' },
+  { id: 'demo-v3', nom: 'Ferme des Tomates Bio', localisation: 'Lot-et-Garonne', appellation: 'Maraîchage biologique', type_sol: 'Limoneux', type_site: 'ferme' },
+  { id: 'demo-v4', nom: 'Verger du Périgord', localisation: 'Dordogne', appellation: 'Arboriculture fruitière', type_sol: 'Argilo-limoneux', type_site: 'exploitation' },
 ];
 
 export const DEMO_PARCELLES = [
   { id: 'demo-p1', vignoble_id: 'demo-v1', nom: 'Parcelle Merlot — Coteau Sud', cepage: 'Merlot', nb_rangs: 7 },
   { id: 'demo-p2', vignoble_id: 'demo-v1', nom: 'Parcelle Cabernet — Plateau', cepage: 'Cabernet Sauvignon', nb_rangs: 7 },
   { id: 'demo-p3', vignoble_id: 'demo-v2', nom: 'Parcelle Principale', cepage: 'Merlot / Cabernet', nb_rangs: 7 },
+  { id: 'demo-p4', vignoble_id: 'demo-v3', nom: 'Serre Tomates Roma', cepage: 'Roma / Cœur de Bœuf', nb_rangs: 4 },
+  { id: 'demo-p5', vignoble_id: 'demo-v3', nom: 'Plein champ Tomates Cerises', cepage: 'Cerise rouge', nb_rangs: 6 },
+  { id: 'demo-p6', vignoble_id: 'demo-v4', nom: 'Verger Pommiers Gala', cepage: 'Gala / Golden', nb_rangs: 5 },
+  { id: 'demo-p7', vignoble_id: 'demo-v4', nom: 'Noisetiers — Parcelle Nord', cepage: 'Noisetier commun', nb_rangs: 3 },
 ];
 
 // ---- Observations (campagne 2026, 3 passages mensuels × 7 rangs) ----
@@ -225,6 +231,8 @@ export const DEMO_STATS = {
   nb_observations: 21,
   nb_traitements: 24,
   nb_analyses: 2,
+  nb_sites: 4,
+  nb_cultures: 3,
   score_global: 4.1,
   score_plante: 4.3,
   score_sanitaire: 3.8,
