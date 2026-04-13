@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getLocalGuideNotation } from "@/lib/guide-notation-data";
 import type { GuideNotation } from "@/lib/types";
 
 interface GuideNotationDrawerProps {
@@ -37,9 +38,15 @@ export function GuideNotationDrawer({
       .single()
       .then(({ data, error: err }) => {
         if (cancelled) return;
-        if (err) {
-          setError("Impossible de charger la fiche.");
-          setFiche(null);
+        if (err || !data) {
+          // Fallback to local data
+          const local = getLocalGuideNotation(codeIndicateur);
+          if (local) {
+            setFiche(local);
+          } else {
+            setError("Impossible de charger la fiche.");
+            setFiche(null);
+          }
         } else {
           setFiche(data as GuideNotation);
         }

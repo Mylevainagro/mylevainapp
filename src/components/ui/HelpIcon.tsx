@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getLocalGuideNotation } from "@/lib/guide-notation-data";
 import { GuideNotationDrawer } from "@/components/ui/GuideNotationDrawer";
 
-// Simple in-memory cache: code_indicateur → boolean (fiche exists & actif)
+// Cache: code_indicateur → boolean (fiche exists)
 const ficheCache = new Map<string, boolean>();
 
 interface HelpIconProps {
@@ -19,14 +20,21 @@ export function HelpIcon({ codeIndicateur }: HelpIconProps) {
   const btnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Already cached
     if (ficheCache.has(codeIndicateur)) {
       setExists(ficheCache.get(codeIndicateur)!);
       return;
     }
 
-    let cancelled = false;
+    // Check local data first (instant)
+    const localFiche = getLocalGuideNotation(codeIndicateur);
+    if (localFiche) {
+      ficheCache.set(codeIndicateur, true);
+      setExists(true);
+      return;
+    }
 
+    // Fallback: check Supabase
+    let cancelled = false;
     supabase
       .from("guide_notation")
       .select("id")
@@ -36,16 +44,13 @@ export function HelpIcon({ codeIndicateur }: HelpIconProps) {
       .then(({ data }) => {
         if (cancelled) return;
         const found = !!data;
-        ficheCache.set(codeIndicateur, found);
+        if (found) ficheCache.set(codeIndicateur, true);
         setExists(found);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [codeIndicateur]);
 
-  // Exigence 1.5: render nothing if no fiche exists
   if (!exists) return null;
 
   return (
