@@ -133,7 +133,7 @@ export function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          MyLevain Agro Intelligence © 2026 — melevain.com
+          MyLevain Agro Intelligence © 2026 — mylevain.com
         </p>
       </div>
     </div>
