@@ -21,4 +21,4 @@ CREATE INDEX idx_app_users_email ON app_users(email);
 -- Le hash est généré côté app avec bcrypt, ici on met un placeholder
 -- L'admin sera créé au premier lancement via le seed ou l'interface
 INSERT INTO app_users (email, password_hash, nom, role, approved) VALUES
-('admin@mylevain.fr', '$2b$10$maPpddgAFxKF0jvQ5qZ.0eh3B3pdr4Pn2UHoas/S5ZtUuqUE0W3KO', 'Administrateur', 'admin', true);
+('admin@melevain.com', '$2b$10$maPpddgAFxKF0jvQ5qZ.0eh3B3pdr4Pn2UHoas/S5ZtUuqUE0W3KO', 'Administrateur', 'admin', true);
