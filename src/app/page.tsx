@@ -29,11 +29,11 @@ export default function HomePage() {
             <p className="text-[10px] text-gray-400">{user?.role === 'admin' ? '👑 Admin' : '👤 Opérateur'}</p>
           </div>
           <button
-            onClick={logout}
-            className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-sm transition-colors"
+            onClick={() => { if (confirm('Se déconnecter ?')) logout(); }}
+            className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-red-50 hover:text-red-600 flex items-center justify-center text-xs transition-colors"
             title="Déconnexion"
           >
-            🚪
+            ↪
           </button>
         </div>
       </div>

@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+
+const STORAGE_KEY = "mylevain_demo_mode";
 
 interface DemoContextType {
   isDemo: boolean;
@@ -17,7 +19,15 @@ export function useDemo() {
 }
 
 export function DemoProvider({ children }: { children: ReactNode }) {
-  const [isDemo, setIsDemo] = useState(false);
+  const [isDemo, setIsDemo] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(STORAGE_KEY) === "true";
+  });
+
+  // Sync to localStorage on change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, String(isDemo));
+  }, [isDemo]);
 
   const toggleDemo = useCallback(() => {
     setIsDemo((v) => !v);
