@@ -8,6 +8,7 @@ import { NumberField } from "@/components/ui/NumberField";
 import { Toast } from "@/components/Toast";
 import { METEO_OPTIONS } from "@/lib/constants";
 import { supabase } from "@/lib/supabase/client";
+import { MODALITES_REF } from "@/lib/constants";
 
 interface VignobleItem { id: string; nom: string; }
 interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
@@ -19,7 +20,9 @@ export default function NewTraitementPage() {
 
   const [vignoblesList, setVignoblesList] = useState<VignobleItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
-  const [modalitesList, setModalitesList] = useState<ModaliteItem[]>([]);
+  const [modalitesList, setModalitesList] = useState<ModaliteItem[]>(
+    MODALITES_REF.map((m) => ({ rang: m.rang, modalite: m.modalite }))
+  );
 
   useEffect(() => {
     async function load() {
@@ -30,7 +33,7 @@ export default function NewTraitementPage() {
       ]);
       if (v.data) setVignoblesList(v.data);
       if (p.data) setParcellesList(p.data);
-      if (m.data) setModalitesList(m.data);
+      if (m.data && m.data.length > 0) setModalitesList(m.data);
     }
     load();
   }, []);
@@ -105,7 +108,7 @@ export default function NewTraitementPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-[#8b5e3c] mb-4">💧 Nouveau traitement</h1>
+      <h1 className="text-xl font-bold gradient-text mb-4">💧 Nouveau traitement</h1>
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       <form onSubmit={handleSubmit} className="space-y-3">
         <Section title="Identification" icon="📍" defaultOpen={true}>
@@ -173,7 +176,7 @@ export default function NewTraitementPage() {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Notes libres..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
         </Section>
 
-        <button type="submit" disabled={saving} className="w-full bg-[#8b5e3c] text-white rounded-xl py-4 font-semibold text-lg shadow-md hover:bg-[#a0714d] disabled:opacity-50">
+        <button type="submit" disabled={saving} className="w-full btn-secondary">
           {saving ? "Enregistrement..." : "💾 Sauvegarder le traitement"}
         </button>
       </form>
