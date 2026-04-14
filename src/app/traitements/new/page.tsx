@@ -83,6 +83,10 @@ export default function NewTraitementPage() {
   const [phAvant, setPhAvant] = useState<number | null>(null);
   const [phApres, setPhApres] = useState<number | null>(null);
   const [origineEau, setOrigineEau] = useState("");
+  const [ventVitesse, setVentVitesse] = useState("");
+  const [ventDirection, setVentDirection] = useState("");
+  const [pressionAtmo, setPressionAtmo] = useState<number | null>(null);
+  const [dateDernierePluie, setDateDernierePluie] = useState("");
 
   const modaliteRef = rang > 0 ? modalitesList.find((m) => m.rang === rang) : null;
   const parcelles = vignoble ? parcellesList.filter(p => {
@@ -122,6 +126,10 @@ export default function NewTraitementPage() {
       ph_avant: phAvant,
       ph_apres: phApres,
       origine_eau: origineEau || null,
+      vent_direction: ventDirection || null,
+      vent_vitesse: ventVitesse || null,
+      pression_atmo: pressionAtmo,
+      date_derniere_pluie: dateDernierePluie || null,
     });
     setSaving(false);
     if (error) {
@@ -209,7 +217,16 @@ export default function NewTraitementPage() {
             <NumberField label="Température" value={temperature} onChange={setTemperature} unit="°C" />
             <NumberField label="Humidité" value={humidite} onChange={setHumidite} unit="%" />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <SelectField label="Vent" value={ventVitesse} onChange={setVentVitesse} options={["Nul", "Faible", "Modéré", "Fort"]} />
+            <SelectField label="Direction vent" value={ventDirection} onChange={setVentDirection} options={["Nord", "Nord-Est", "Est", "Sud-Est", "Sud", "Sud-Ouest", "Ouest", "Nord-Ouest"]} />
+          </div>
+          <NumberField label="Pression atmosphérique" value={pressionAtmo} onChange={setPressionAtmo} unit="hPa" step={1} />
           <SelectField label="Météo" value={conditionsMeteo} onChange={setConditionsMeteo} options={METEO_OPTIONS} />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Date dernière pluie</label>
+            <input type="date" value={dateDernierePluie} onChange={(e) => setDateDernierePluie(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80" />
+          </div>
         </Section>
 
         <Section title="Notes" icon="💬">
