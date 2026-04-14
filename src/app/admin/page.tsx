@@ -509,22 +509,6 @@ export default function AdminPage() {
         {produitsList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun produit (exécuter migration 013)</p>}
       </AdminCard>
 
-      {/* ---- MODALITÉS RANGS (original) ---- */}
-      <AdminCard title="🧪 Modalités (protocole)" onAdd={() => setModal({ type: "modalite_new", data: { rang: modalites.length + 1, modalite: "", description: "", surnageant_l: 0, eau_l: 0, volume_l: 0, actif: true } })}>
-        {modalites.map(m => (
-          <div key={m.rang} className={`flex items-center justify-between px-4 py-3 ${!m.actif ? "opacity-40" : ""}`}>
-            <div className="flex items-center gap-3">
-              <span className="w-7 h-7 rounded-full bg-[#2d5016]/10 text-[#2d5016] flex items-center justify-center text-xs font-bold">{m.rang}</span>
-              <div>
-                <div className="font-medium text-sm">{m.modalite}</div>
-                <div className="text-xs text-gray-500">{m.description} — {m.volume_l}L</div>
-              </div>
-            </div>
-            <button onClick={() => setModal({ type: "modalite", data: { ...m } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg active:scale-95">✏️</button>
-          </div>
-        ))}
-      </AdminCard>
-
       {/* ---- CONFIG / PARAMÈTRES ---- */}
       <AdminCard title="📊 Paramètres & Seuils" onAdd={() => setModal({ type: "config_new", data: { cle: "", valeur: "", categorie: "general", description: "" } })}>
         {configs.map(c => (
@@ -568,36 +552,6 @@ export default function AdminPage() {
         <input value={modal?.data?.cepage || ""} onChange={e => updateModal("cepage", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
         <label className="text-sm font-medium">Nombre de rangs</label>
         <input type="number" value={modal?.data?.nb_rangs || 7} onChange={e => updateModal("nb_rangs", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-      </EditModal>
-
-      {/* Modal Modalité */}
-      <EditModal open={modal?.type === "modalite" || modal?.type === "modalite_new"} title={modal?.type === "modalite_new" ? "Nouvelle modalité" : "Modifier modalité"} onClose={() => setModal(null)} onSave={saveModalite} saving={saving}>
-        <label className="text-sm font-medium">Rang</label>
-        <input type="number" value={modal?.data?.rang || ""} onChange={e => updateModal("rang", Number(e.target.value))} disabled={modal?.type === "modalite"} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" />
-        <label className="text-sm font-medium">Nom de la modalité</label>
-        <input value={modal?.data?.modalite || ""} onChange={e => updateModal("modalite", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <label className="text-sm font-medium">Description</label>
-        <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="text-xs font-medium">Surnageant (L)</label>
-            <input type="number" step="0.5" value={modal?.data?.surnageant_l ?? 0} onChange={e => updateModal("surnageant_l", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs font-medium">Eau (L)</label>
-            <input type="number" step="0.5" value={modal?.data?.eau_l ?? 0} onChange={e => updateModal("eau_l", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs font-medium">Volume (L)</label>
-            <input type="number" step="0.5" value={modal?.data?.volume_l ?? 0} onChange={e => updateModal("volume_l", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" />
-          </div>
-        </div>
-        {modal?.type === "modalite" && (
-          <div className="flex items-center gap-2 pt-2">
-            <input type="checkbox" id="actif" checked={modal?.data?.actif ?? true} onChange={e => updateModal("actif", e.target.checked)} className="rounded" />
-            <label htmlFor="actif" className="text-sm">Modalité active</label>
-          </div>
-        )}
       </EditModal>
 
       {/* Modal Config */}
