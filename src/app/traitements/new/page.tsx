@@ -13,6 +13,9 @@ import { MODALITES_REF } from "@/lib/constants";
 interface VignobleItem { id: string; nom: string; }
 interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
 interface ModaliteItem { rang: number; modalite: string; }
+interface ProtocoleOption { id: string; code: string; label: string; }
+interface ModaliteLevainOption { id: string; code: string; label: string; }
+interface ProduitOption { id: string; code: string; label: string; }
 
 export default function NewTraitementPage() {
   const router = useRouter();
@@ -23,17 +26,26 @@ export default function NewTraitementPage() {
   const [modalitesList, setModalitesList] = useState<ModaliteItem[]>(
     MODALITES_REF.map((m) => ({ rang: m.rang, modalite: m.modalite }))
   );
+  const [protocoleOptions, setProtocoleOptions] = useState<ProtocoleOption[]>([]);
+  const [modaliteLevainOptions, setModaliteLevainOptions] = useState<ModaliteLevainOption[]>([]);
+  const [produitOptions, setProduitOptions] = useState<ProduitOption[]>([]);
 
   useEffect(() => {
     async function load() {
-      const [v, p, m] = await Promise.all([
+      const [v, p, m, proto, modLev, prod] = await Promise.all([
         supabase.from("vignobles").select("id, nom").order("nom"),
         supabase.from("parcelles").select("id, vignoble_id, nom").order("nom"),
         supabase.from("referentiel_modalites").select("rang, modalite").eq("actif", true).order("rang"),
+        supabase.from("protocoles").select("id, code, label").eq("actif", true).order("ordre"),
+        supabase.from("modalites_levain").select("id, code, label").eq("actif", true).order("ordre"),
+        supabase.from("produits").select("id, code, label").eq("actif", true).order("ordre"),
       ]);
       if (v.data) setVignoblesList(v.data);
       if (p.data) setParcellesList(p.data);
       if (m.data && m.data.length > 0) setModalitesList(m.data);
+      if (proto.data) setProtocoleOptions(proto.data);
+      if (modLev.data) setModaliteLevainOptions(modLev.data);
+      if (prod.data) setProduitOptions(prod.data);
     }
     load();
   }, []);
@@ -63,6 +75,14 @@ export default function NewTraitementPage() {
   const [unite, setUnite] = useState("");
   const [objectif, setObjectif] = useState("");
   const [campagne, setCampagne] = useState(currentYear);
+
+  // Phase 3 — Protocole / Modalité / Produit
+  const [protocoleId, setProtocoleId] = useState("");
+  const [modaliteLevainId, setModaliteLevainId] = useState("");
+  const [produitLevainId, setProduitLevainId] = useState("");
+  const [phAvant, setPhAvant] = useState<number | null>(null);
+  const [phApres, setPhApres] = useState<number | null>(null);
+  const [origineEau, setOrigineEau] = useState("");
 
   const modaliteRef = rang > 0 ? modalitesList.find((m) => m.rang === rang) : null;
   const parcelles = vignoble ? parcellesList.filter(p => {
@@ -96,6 +116,12 @@ export default function NewTraitementPage() {
       unite: unite || null,
       objectif: objectif || null,
       campagne: campagne || null,
+      protocole_id: protocoleId || null,
+      modalite_levain_id: modaliteLevainId || null,
+      produit_levain_id: produitLevainId || null,
+      ph_avant: phAvant,
+      ph_apres: phApres,
+      origine_eau: origineEau || null,
     });
     setSaving(false);
     if (error) {
@@ -139,6 +165,20 @@ export default function NewTraitementPage() {
             <label className="text-sm font-medium text-gray-700">Opérateur</label>
             <input type="text" value={operateur} onChange={(e) => setOperateur(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </div>
+        </Section>
+
+        <Section title="Protocole & Modalité" icon="📋" defaultOpen={true}>
+          <SelectField label="Protocole" value={protocoleId} onChange={setProtocoleId}
+            options={protocoleOptions.map(p => ({ value: p.id, label: `${p.code} — ${p.label}` }))} placeholder="Sélectionner un protocole" />
+          <SelectField label="Modalité levain" value={modaliteLevainId} onChange={setModaliteLevainId}
+            options={modaliteLevainOptions.map(m => ({ value: m.id, label: `${m.code} — ${m.label}` }))} placeholder="Sélectionner une modalité" />
+          <SelectField label="Produit levain" value={produitLevainId} onChange={setProduitLevainId}
+            options={produitOptions.map(p => ({ value: p.id, label: `${p.code} — ${p.label}` }))} placeholder="Sélectionner un produit" />
+          <div className="grid grid-cols-2 gap-3">
+            <NumberField label="pH avant dilution" value={phAvant} onChange={setPhAvant} step={0.1} />
+            <NumberField label="pH après dilution" value={phApres} onChange={setPhApres} step={0.1} />
+          </div>
+          <SelectField label="Origine eau" value={origineEau} onChange={setOrigineEau} options={["Forage", "Robinet", "Pluie", "Autre"]} />
         </Section>
 
         <Section title="Détails traitement" icon="🔬" defaultOpen={true}>

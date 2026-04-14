@@ -19,6 +19,9 @@ interface TypeCultureItem { id: string; code: string; nom: string; description: 
 interface EspeceItem { id: string; type_culture_id: string; code: string; nom: string; actif: boolean; }
 interface SiteItem { id: string; nom: string; type_site: string | null; localisation: string | null; actif: boolean; }
 interface ZoneCultureItem { id: string; site_id: string; type_culture_id: string; espece_id: string | null; nom: string; surface_ha: number | null; latitude: number | null; longitude: number | null; actif: boolean; }
+interface ProtocoleItem { id: string; code: string; label: string; type: string; description: string | null; actif: boolean; ordre: number; }
+interface ModaliteLevainItem { id: string; code: string; label: string; dilution: string | null; description: string | null; actif: boolean; ordre: number; }
+interface ProduitItem { id: string; code: string; label: string; type: string; origine: string | null; description: string | null; actif: boolean; ordre: number; }
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -33,6 +36,9 @@ export default function AdminPage() {
   const [especes, setEspeces] = useState<EspeceItem[]>([]);
   const [sites, setSites] = useState<SiteItem[]>([]);
   const [zonesCulture, setZonesCulture] = useState<ZoneCultureItem[]>([]);
+  const [protocolesList, setProtocolesList] = useState<ProtocoleItem[]>([]);
+  const [modalitesLevain, setModalitesLevain] = useState<ModaliteLevainItem[]>([]);
+  const [produitsList, setProduitsList] = useState<ProduitItem[]>([]);
   const [toast, setToast] = useState({ message: "", type: "success" as "success" | "error", visible: false });
   const hideToast = useCallback(() => setToast(t => ({ ...t, visible: false })), []);
 
@@ -79,6 +85,16 @@ export default function AdminPage() {
       if (esp.data) setEspeces(esp.data);
       if (sit.data) setSites(sit.data);
       if (zc.data) setZonesCulture(zc.data);
+
+      // Load protocoles, modalités levain, produits
+      const [proto, modLev, prod] = await Promise.all([
+        supabase.from("protocoles").select("*").order("ordre"),
+        supabase.from("modalites_levain").select("*").order("ordre"),
+        supabase.from("produits").select("*").order("ordre"),
+      ]);
+      if (proto.data) setProtocolesList(proto.data);
+      if (modLev.data) setModalitesLevain(modLev.data);
+      if (prod.data) setProduitsList(prod.data);
 
       setLoading(false);
     }
@@ -443,9 +459,57 @@ export default function AdminPage() {
         {especes.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune espèce (exécuter migration 008)</p>}
       </AdminCard>
 
-      <h2 className="text-lg font-bold gradient-text mt-6">🧪 Protocole</h2>
+      <h2 className="text-lg font-bold gradient-text mt-6">🧪 Protocole & Produits</h2>
 
-      {/* ---- MODALITÉS (original) ---- */}
+      {/* ---- PROTOCOLES ---- */}
+      <AdminCard title="📋 Protocoles (13)">
+        {protocolesList.map(p => (
+          <div key={p.id} className={`flex items-center justify-between px-4 py-3 ${!p.actif ? "opacity-40" : ""}`}>
+            <div className="flex items-center gap-3">
+              <span className="w-12 text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg text-center">{p.code}</span>
+              <div>
+                <div className="font-medium text-sm">{p.label}</div>
+                <div className="text-xs text-gray-500">{p.type} — {p.description || "—"}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {protocolesList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun protocole (exécuter migration 013+014)</p>}
+      </AdminCard>
+
+      {/* ---- MODALITÉS LEVAIN ---- */}
+      <AdminCard title="🧪 Modalités levain (M0/M1/M2)">
+        {modalitesLevain.map(m => (
+          <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${!m.actif ? "opacity-40" : ""}`}>
+            <div className="flex items-center gap-3">
+              <span className="w-10 text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg text-center">{m.code}</span>
+              <div>
+                <div className="font-medium text-sm">{m.label}</div>
+                <div className="text-xs text-gray-500">Dilution : {m.dilution || "—"} — {m.description || ""}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {modalitesLevain.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune modalité (exécuter migration 014)</p>}
+      </AdminCard>
+
+      {/* ---- PRODUITS ---- */}
+      <AdminCard title="🌿 Produits MyLevain">
+        {produitsList.map(p => (
+          <div key={p.id} className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="w-10 text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg text-center">{p.code}</span>
+              <div>
+                <div className="font-medium text-sm">{p.label}</div>
+                <div className="text-xs text-gray-500">{p.type} — {p.origine || "—"}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {produitsList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun produit (exécuter migration 013)</p>}
+      </AdminCard>
+
+      {/* ---- MODALITÉS RANGS (original) ---- */}
       <AdminCard title="🧪 Modalités (protocole)" onAdd={() => setModal({ type: "modalite_new", data: { rang: modalites.length + 1, modalite: "", description: "", surnageant_l: 0, eau_l: 0, volume_l: 0, actif: true } })}>
         {modalites.map(m => (
           <div key={m.rang} className={`flex items-center justify-between px-4 py-3 ${!m.actif ? "opacity-40" : ""}`}>
