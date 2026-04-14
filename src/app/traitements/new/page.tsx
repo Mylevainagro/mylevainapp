@@ -88,7 +88,6 @@ export default function NewTraitementPage() {
   const [pressionAtmo, setPressionAtmo] = useState<number | null>(null);
   const [dateDernierePluie, setDateDernierePluie] = useState("");
 
-  const modaliteRef = rang > 0 ? modalitesList.find((m) => m.rang === rang) : null;
   const parcelles = vignoble ? parcellesList.filter(p => {
     const v = vignoblesList.find(vv => vv.nom === vignoble);
     return v && p.vignoble_id === v.id;
@@ -104,7 +103,7 @@ export default function NewTraitementPage() {
     const { error } = await supabase.from("traitements").insert({
       parcelle_id: parcelleId,
       rang,
-      modalite: modaliteRef?.modalite ?? "",
+      modalite: "",
       date,
       produit,
       dose: dose || null,
@@ -146,19 +145,21 @@ export default function NewTraitementPage() {
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       <form onSubmit={handleSubmit} className="space-y-3">
         <Section title="Identification" icon="📍" defaultOpen={true}>
-          <SelectField label="Vignoble" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); }} options={vignoblesList.map(v => v.nom)} />
+          <SelectField label="Vignoble / Site" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); }} options={vignoblesList.map(v => v.nom)} />
           {parcelles.length > 0 && (
             <SelectField label="Parcelle" value={parcelleId} onChange={setParcelleId} options={parcelles.map(p => ({ value: p.id, label: p.nom }))} />
           )}
-          <SelectField label="Rang" value={rang ? String(rang) : ""} onChange={(v) => setRang(Number(v))} options={modalitesList.map(m => String(m.rang))} />
-          {modaliteRef && (
-            <div className="bg-[#8b5e3c]/5 rounded-lg px-3 py-2 text-sm">
-              <span className="font-medium text-[#8b5e3c]">Modalité :</span> {modaliteRef.modalite}
-            </div>
-          )}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Rang</label>
+            <input type="number" min={1} max={20} value={rang || ""} onChange={(e) => setRang(Number(e.target.value))} placeholder="ex: 1, 2, 3..." className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Campagne</label>
+            <input type="text" value={campagne} onChange={(e) => setCampagne(e.target.value)} placeholder="ex: 2026" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Date</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
           </div>
         </Section>
 
@@ -205,10 +206,6 @@ export default function NewTraitementPage() {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Objectif</label>
             <input type="text" value={objectif} onChange={(e) => setObjectif(e.target.value)} placeholder="ex: prévention mildiou..." className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Campagne</label>
-            <input type="text" value={campagne} onChange={(e) => setCampagne(e.target.value)} placeholder="ex: 2025" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </div>
         </Section>
 
