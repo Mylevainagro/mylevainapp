@@ -11,12 +11,14 @@ import { ListSkeleton } from "@/components/Skeleton";
 
 // ---- Types locaux simplifiés ----
 interface SiteItem { id: string; nom: string; type_exploitation: string | null; adresse: string | null; latitude: number | null; longitude: number | null; actif: boolean; }
-interface ParcelleItem { id: string; site_id: string; nom: string; surface: number | null; type_culture: string | null; variete: string | null; sol: string | null; }
+interface ParcelleItem { id: string; site_id: string; nom: string; surface: number | null; type_culture: string | null; variete: string | null; sol: string | null; culture_id: string | null; }
 interface PlacetteItem { id: string; parcelle_id: string; modalite_id: string | null; nom: string; nb_ceps: number; description_position: string | null; pieds_marques: string | null; actif: boolean; }
 interface ProtocoleItem { id: string; code: string; label: string; type: string; description: string | null; actif: boolean; ordre: number; }
 interface ModaliteLevainItem { id: string; code: string; label: string; dilution: string | null; description: string | null; actif: boolean; ordre: number; }
 interface ProduitItem { id: string; code: string; label: string; type: string; origine: string | null; description: string | null; actif: boolean; ordre: number; }
 interface AppUserItem { id: string; email: string; nom: string; role: string; approved: boolean; created_at: string; last_login: string | null; }
+interface CultureItem { id: string; code: string; nom: string; actif: boolean; }
+interface BbchStadeItem { id: string; culture_id: string; code: string; label: string; description: string | null; ordre: number; actif: boolean; }
 
 const TYPE_EXPLOITATION = ["vignoble", "maraichage", "grande_culture", "verger", "serre", "mixte", "autre"] as const;
 const TYPE_CULTURE = ["vigne", "mais", "ble", "legumes", "fruitiers", "autre"] as const;
@@ -117,6 +119,9 @@ export default function AdminPage() {
   const [protocoles, setProtocoles] = useState<ProtocoleItem[]>([]);
   const [modalites, setModalites] = useState<ModaliteLevainItem[]>([]);
   const [produits, setProduits] = useState<ProduitItem[]>([]);
+  const [cultures, setCultures] = useState<CultureItem[]>([]);
+  const [bbchStades, setBbchStades] = useState<BbchStadeItem[]>([]);
+  const [bbchFilterCulture, setBbchFilterCulture] = useState("");
   const [appUsers, setAppUsers] = useState<AppUserItem[]>([]);
   const [toast, setToast] = useState({ message: "", type: "success" as "success" | "error", visible: false });
   const hideToast = useCallback(() => setToast(t => ({ ...t, visible: false })), []);
@@ -141,6 +146,11 @@ export default function AdminPage() {
       if (pr.data) setProtocoles(pr.data);
       if (m.data) setModalites(m.data);
       if (pd.data) setProduits(pd.data);
+      // Load cultures & BBCH
+      const { data: cultData } = await supabase.from("cultures").select("*").order("nom");
+      if (cultData) setCultures(cultData);
+      const { data: bbchData } = await supabase.from("bbch_stades").select("*").order("ordre");
+      if (bbchData) setBbchStades(bbchData);
       const usersRes = await fetch('/api/auth/users');
       if (usersRes.ok) { const d = await usersRes.json(); setAppUsers(d.users || []); }
       setLoading(false);
@@ -165,7 +175,7 @@ export default function AdminPage() {
   // ---- CRUD Parcelles ----
   async function saveParcelle() {
     setSaving(true); const d = modal?.data;
-    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null };
+    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null };
     if (d.id) { await supabase.from("parcelles").update(payload).eq("id", d.id); showToast("Parcelle modifiée"); }
     else { const { error } = await supabase.from("parcelles").insert(payload); if (error) showToast(error.message, "error"); else showToast("Parcelle ajoutée"); }
     setSaving(false); setModal(null);
@@ -198,7 +208,7 @@ export default function AdminPage() {
   // ---- CRUD Modalités ----
   async function saveModalite() {
     setSaving(true); const d = modal?.data;
-    const payload = { code: d.code, label: d.label, dilution: d.dilution || null, description: d.description || null, actif: d.actif ?? true, ordre: d.ordre || 1 };
+    const payload = { code: d.code, label: d.label, dilution: d.dilution || d.levain_dilution || null, description: d.description || null, actif: d.actif ?? true, ordre: d.ordre || 1, levain_type: d.levain_type || null, levain_dilution: d.levain_dilution || d.dilution || null, phyto_type: d.phyto_type || null, phyto_dose: d.phyto_dose || null };
     if (d.id) { await supabase.from("modalites_levain").update(payload).eq("id", d.id); showToast("Modalité modifiée"); }
     else { const { error } = await supabase.from("modalites_levain").insert(payload); if (error) showToast(error.message, "error"); else showToast("Modalité ajoutée"); }
     setSaving(false); setModal(null);
@@ -216,6 +226,26 @@ export default function AdminPage() {
     const { data } = await supabase.from("produits").select("*").order("ordre"); if (data) setProduits(data);
   }
   async function deleteProduit(id: string) { if (!confirm("Supprimer ?")) return; await supabase.from("produits").delete().eq("id", id); setProduits(p => p.filter(x => x.id !== id)); showToast("Supprimé"); }
+
+  // ---- CRUD Cultures ----
+  async function saveCulture() {
+    setSaving(true); const d = modal?.data;
+    if (d.id) { await supabase.from("cultures").update({ code: d.code, nom: d.nom, actif: d.actif ?? true }).eq("id", d.id); showToast("Culture modifiée"); }
+    else { const { error } = await supabase.from("cultures").insert({ code: d.code, nom: d.nom, actif: true }); if (error) showToast(error.message, "error"); else showToast("Culture ajoutée"); }
+    setSaving(false); setModal(null);
+    const { data } = await supabase.from("cultures").select("*").order("nom"); if (data) setCultures(data);
+  }
+  async function deleteCulture(id: string) { if (!confirm("Supprimer cette culture et ses stades BBCH ?")) return; await supabase.from("cultures").delete().eq("id", id); setCultures(c => c.filter(x => x.id !== id)); setBbchStades(b => b.filter(x => x.culture_id !== id)); showToast("Supprimé"); }
+
+  // ---- CRUD BBCH ----
+  async function saveBbch() {
+    setSaving(true); const d = modal?.data;
+    if (d.id) { await supabase.from("bbch_stades").update({ code: d.code, label: d.label, description: d.description || null, ordre: d.ordre || 0, actif: d.actif ?? true }).eq("id", d.id); showToast("Stade modifié"); }
+    else { const { error } = await supabase.from("bbch_stades").insert({ culture_id: d.culture_id, code: d.code, label: d.label, description: d.description || null, ordre: d.ordre || 0, actif: true }); if (error) showToast(error.message, "error"); else showToast("Stade ajouté"); }
+    setSaving(false); setModal(null);
+    const { data } = await supabase.from("bbch_stades").select("*").order("ordre"); if (data) setBbchStades(data);
+  }
+  async function deleteBbch(id: string) { if (!confirm("Supprimer ?")) return; await supabase.from("bbch_stades").delete().eq("id", id); setBbchStades(b => b.filter(x => x.id !== id)); showToast("Supprimé"); }
 
   // ---- Users ----
   async function toggleUserApproval(userId: string, approved: boolean) {
@@ -289,7 +319,7 @@ export default function AdminPage() {
             <div>
               <div className="font-medium text-sm">{p.nom}</div>
               <div className="text-xs text-gray-500">
-                {sites.find(s => s.id === p.site_id)?.nom || "?"} · {p.type_culture || "—"} · {p.variete || "—"}
+                {sites.find(s => s.id === p.site_id)?.nom || "?"} · {cultures.find(c => c.id === p.culture_id)?.nom || p.type_culture || "—"} · {p.variete || "—"}
                 {p.surface && ` · ${p.surface} ha`}
               </div>
             </div>
@@ -371,6 +401,49 @@ export default function AdminPage() {
       </AdminCard>
 
       {/* ======== RESET ======== */}
+      <h2 className="text-lg font-bold gradient-text mt-6">🌾 Cultures & Stades BBCH</h2>
+
+      <AdminCard title="🌾 Cultures" onAdd={() => setModal({ type: "culture", data: { code: "", nom: "" } })}>
+        {cultures.map(c => (
+          <div key={c.id} className={`flex items-center justify-between px-4 py-3 ${!c.actif ? "opacity-40" : ""}`}>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">{c.code}</span>
+              <span className="font-medium text-sm">{c.nom}</span>
+            </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setModal({ type: "culture", data: { ...c } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg">✏️</button>
+              <button onClick={() => deleteCulture(c.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg">🗑</button>
+            </div>
+          </div>
+        ))}
+        {cultures.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune culture — exécuter migration 020</p>}
+      </AdminCard>
+
+      <AdminCard title="📊 Stades BBCH" onAdd={() => setModal({ type: "bbch", data: { culture_id: cultures[0]?.id || "", code: "", label: "", description: "", ordre: bbchStades.length + 1 } })}>
+        <div className="px-4 py-2">
+          <select value={bbchFilterCulture} onChange={e => setBbchFilterCulture(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">Toutes les cultures</option>
+            {cultures.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+          </select>
+        </div>
+        {(bbchFilterCulture ? bbchStades.filter(b => b.culture_id === bbchFilterCulture) : bbchStades).map(b => (
+          <div key={b.id} className={`flex items-center justify-between px-4 py-2.5 ${!b.actif ? "opacity-40" : ""}`}>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg w-10 text-center">{b.code}</span>
+              <div>
+                <div className="font-medium text-sm">{b.label}</div>
+                <div className="text-[10px] text-gray-400">{cultures.find(c => c.id === b.culture_id)?.nom} · {b.description || "—"}</div>
+              </div>
+            </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setModal({ type: "bbch", data: { ...b } })} className="text-xs bg-gray-100 px-2 py-1 rounded-lg">✏️</button>
+              <button onClick={() => deleteBbch(b.id)} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg">🗑</button>
+            </div>
+          </div>
+        ))}
+        {bbchStades.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun stade — exécuter migration 020</p>}
+      </AdminCard>
+
       <h2 className="text-lg font-bold text-red-600 mt-6">🗑️ Reset données</h2>
       <ResetSection showToast={showToast} />
 
@@ -404,10 +477,10 @@ export default function AdminPage() {
         </select>
         <label className="text-sm font-medium">Surface (ha)</label>
         <input type="number" step="0.01" value={modal?.data?.surface ?? ""} onChange={e => updateModal("surface", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <label className="text-sm font-medium">Type de culture</label>
-        <select value={modal?.data?.type_culture || ""} onChange={e => updateModal("type_culture", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        <label className="text-sm font-medium">Culture</label>
+        <select value={modal?.data?.culture_id || modal?.data?.type_culture || ""} onChange={e => { updateModal("culture_id", e.target.value); updateModal("type_culture", e.target.value ? cultures.find(c => c.id === e.target.value)?.code ?? "" : ""); }} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">Sélectionner…</option>
-          {TYPE_CULTURE.map(t => <option key={t} value={t}>{t}</option>)}
+          {cultures.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
         <label className="text-sm font-medium">Variété</label>
         <input value={modal?.data?.variete || ""} onChange={e => updateModal("variete", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Merlot, Tomate Roma" />
@@ -460,8 +533,14 @@ export default function AdminPage() {
         <input value={modal?.data?.code || ""} onChange={e => updateModal("code", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: M0, M1" />
         <label className="text-sm font-medium">Label *</label>
         <input value={modal?.data?.label || ""} onChange={e => updateModal("label", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <label className="text-sm font-medium">Dilution</label>
-        <input value={modal?.data?.dilution || ""} onChange={e => updateModal("dilution", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: 1/4, 1/2" />
+        <label className="text-sm font-medium">Type levain</label>
+        <input value={modal?.data?.levain_type || ""} onChange={e => updateModal("levain_type", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Surnageant, Aucun" />
+        <label className="text-sm font-medium">Dilution levain</label>
+        <input value={modal?.data?.levain_dilution || modal?.data?.dilution || ""} onChange={e => { updateModal("levain_dilution", e.target.value); updateModal("dilution", e.target.value); }} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: 1/4, 1/2" />
+        <label className="text-sm font-medium">Produit phyto</label>
+        <input value={modal?.data?.phyto_type || ""} onChange={e => updateModal("phyto_type", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Cuivre, Soufre, Aucun" />
+        <label className="text-sm font-medium">Dose phyto</label>
+        <input value={modal?.data?.phyto_dose || ""} onChange={e => updateModal("phyto_dose", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: 100%, 50%, 25%" />
         <label className="text-sm font-medium">Description</label>
         <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
       </EditModal>
@@ -480,6 +559,31 @@ export default function AdminPage() {
         <input value={modal?.data?.origine || ""} onChange={e => updateModal("origine", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
         <label className="text-sm font-medium">Description</label>
         <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+      </EditModal>
+
+      {/* Modal Culture */}
+      <EditModal open={modal?.type === "culture"} title={modal?.data?.id ? "Modifier culture" : "Nouvelle culture"} onClose={() => setModal(null)} onSave={saveCulture} saving={saving}>
+        <label className="text-sm font-medium">Code *</label>
+        <input value={modal?.data?.code || ""} onChange={e => updateModal("code", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: vigne, ble, mais" />
+        <label className="text-sm font-medium">Nom *</label>
+        <input value={modal?.data?.nom || ""} onChange={e => updateModal("nom", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Vigne, Blé, Maïs" />
+      </EditModal>
+
+      {/* Modal BBCH */}
+      <EditModal open={modal?.type === "bbch"} title={modal?.data?.id ? "Modifier stade BBCH" : "Nouveau stade BBCH"} onClose={() => setModal(null)} onSave={saveBbch} saving={saving}>
+        <label className="text-sm font-medium">Culture *</label>
+        <select value={modal?.data?.culture_id || ""} onChange={e => updateModal("culture_id", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="">Sélectionner…</option>
+          {cultures.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+        </select>
+        <label className="text-sm font-medium">Code BBCH *</label>
+        <input value={modal?.data?.code || ""} onChange={e => updateModal("code", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: 09, 23, 65" />
+        <label className="text-sm font-medium">Label *</label>
+        <input value={modal?.data?.label || ""} onChange={e => updateModal("label", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Débourrement, Floraison" />
+        <label className="text-sm font-medium">Description</label>
+        <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Pointe verte visible" />
+        <label className="text-sm font-medium">Ordre</label>
+        <input type="number" value={modal?.data?.ordre || 0} onChange={e => updateModal("ordre", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
       </EditModal>
     </div>
   );

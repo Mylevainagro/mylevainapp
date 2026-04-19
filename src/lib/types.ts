@@ -29,6 +29,25 @@ export type StadeTraitement = "A" | "B" | "C" | "D" | "E" | "F";
 export type ZoneTraiteeType = "rang" | "surface";
 export type TypeApplication = "pulve_dos" | "tracteur" | "panneaux_recuperateurs";
 
+// ---- Culture & BBCH dynamique ----
+
+export interface Culture {
+  id: string;
+  code: string;
+  nom: string;
+  actif: boolean;
+}
+
+export interface BbchStade {
+  id: string;
+  culture_id: string;
+  code: string;
+  label: string;
+  description: string | null;
+  ordre: number;
+  actif: boolean;
+}
+
 // ---- Placette (unité expérimentale d'observation) ----
 
 export interface Placette {
