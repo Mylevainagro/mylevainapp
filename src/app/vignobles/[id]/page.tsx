@@ -12,14 +12,22 @@ import { ListSkeleton } from "@/components/Skeleton";
 interface SiteData { id: string; nom: string; localisation: string | null; type_exploitation: string | null; adresse: string | null; }
 interface ParcelleData { id: string; nom: string; variete: string | null; surface: number | null; sol: string | null; type_culture: string | null; }
 interface PlacetteData { id: string; parcelle_id: string; nom: string; nb_ceps: number; modalite_id: string | null; }
-interface AnalyseData { id: string; parcelle_id: string; date_prelevement: string; phase: string; ph: number | null; matiere_organique_pct: number | null; score_sante_sol: number | null; cuivre_total: number | null; biomasse_microbienne: number | null; }
+interface AnalyseData { id: string; parcelle_id: string; date_prelevement: string; phase: string; ph: number | null; matiere_organique_pct: number | null; score_sante_sol: number | null; cuivre_total: number | null; biomasse_microbienne: number | null; fichier_pdf_url: string | null; }
 
 function AnalyseSolCard({ analyse }: { analyse: AnalyseData }) {
   return (
     <div className="glass rounded-2xl p-4 space-y-2">
       <div className="flex justify-between items-center">
         <span className="text-sm font-semibold text-gray-700">🧪 {analyse.phase}</span>
-        <span className="text-xs text-gray-400">{new Date(analyse.date_prelevement).toLocaleDateString("fr-FR")}</span>
+        <div className="flex items-center gap-2">
+          {analyse.fichier_pdf_url && (
+            <a href={analyse.fichier_pdf_url} target="_blank" rel="noopener noreferrer"
+              className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg font-medium hover:bg-blue-100 transition-colors">
+              📄 Voir PDF
+            </a>
+          )}
+          <span className="text-xs text-gray-400">{new Date(analyse.date_prelevement).toLocaleDateString("fr-FR")}</span>
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-2 text-xs">
         {analyse.ph != null && <div className="bg-emerald-50 rounded-lg p-2 text-center"><div className="font-bold text-emerald-700">{analyse.ph}</div><div className="text-emerald-600">pH</div></div>}
@@ -93,7 +101,7 @@ export default function VignoblePage() {
         if (plData) setPlacettes(plData);
 
         // Load analyses
-        const { data: anaData } = await supabase.from("analyses_sol").select("id, parcelle_id, date_prelevement, phase, ph, matiere_organique_pct, score_sante_sol, cuivre_total, biomasse_microbienne").in("parcelle_id", pIds).order("date_prelevement", { ascending: false });
+        const { data: anaData } = await supabase.from("analyses_sol").select("id, parcelle_id, date_prelevement, phase, ph, matiere_organique_pct, score_sante_sol, cuivre_total, biomasse_microbienne, fichier_pdf_url").in("parcelle_id", pIds).order("date_prelevement", { ascending: false });
         if (anaData) setAnalyses(anaData);
 
         // Load last obs dates
