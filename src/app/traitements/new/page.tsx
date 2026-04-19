@@ -102,7 +102,7 @@ export default function NewTraitementPage() {
   const [mode, setMode] = useState<"rang" | "surface">("rang");
 
   // Étape 4 — Nombre de rangs (mode rang)
-  const [nbRangs, setNbRangs] = useState<number>(7);
+  const [nbRangs, setNbRangs] = useState<number>(1);
 
   // Étape 5+6 — Rangs générés avec modalités
   const [rangs, setRangs] = useState<RangEntry[]>([]);
@@ -336,7 +336,7 @@ export default function NewTraitementPage() {
           <>
             {/* ===== Étape 4 — Nombre de rangs ===== */}
             <Section title="4. Nombre de rangs" icon="🔢" defaultOpen={true}>
-              <NumberField label="Nombre de rangs" value={nbRangs} onChange={(v) => setNbRangs(v ?? 7)} min={1} max={50} />
+              <NumberField label="Nombre de rangs" value={nbRangs} onChange={(v) => setNbRangs(v ?? 1)} min={1} max={20} />
               <p className="text-xs text-gray-400">{rangs.length} rang(s) générés automatiquement</p>
             </Section>
 
