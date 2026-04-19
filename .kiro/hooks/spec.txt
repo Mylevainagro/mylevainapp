@@ -1,0 +1,429 @@
+Gmail	Davy Ofwood <davyduboy@gmail.com>
+(aucun objet)
+Davy Ofwood <davyduboy@gmail.com>	19 avril 2026 à 18:19
+À : Davy Ofwood <davyduboy@gmail.com>
+Parfait 👏
+👉 Là on passe dans le concret terrain + structuration produit, exactement ce qu’il faut faire avant lundi.
+
+Je vais te faire un document clair, logique, terrain + dev-ready, que tu peux :
+
+✔️ utiliser lundi sur le terrain
+✔️ copier-coller dans Kiro
+✔️ envoyer à ton frère
+✔️ transformer en specs produit
+
+
+🧠 🎯 OBJECTIF
+
+👉 Avoir une app qui permet :
+
+Saisie simple terrain
+Données propres pour IA
+Logique agronomique claire (Wilfried)
+Zéro confusion protocole / modalité / produit
+
+
+🚜 🧩 SCÉNARIO TERRAIN COMPLET (À SUIVRE LUNDI)
+
+
+
+🔵 1. AVANT D’ARRIVER SUR LE TERRAIN (PRÉPARATION)
+
+👉 À faire dans l’app (ADMIN)
+
+1.1 Créer un
+
+SITE
+
+👉 (ancien “vignoble” → remplacé par “Site”)
+
+Champs :
+
+Nom client / Château
+Nom parcelle
+GPS
+Cépage / culture
+Densité plantation
+Type de sol
+Pratique (bio, conventionnel…)
+Description rangs (ex : 7 rangs Merlot)
+
+
+1.2 Créer un
+
+PROTOCOLE
+
+👉 Protocole = stratégie globale
+
+Ex :
+
+P1S (séquentiel)
+P2MT (mélange cuve)
+
+
+1.3 Définir les
+
+MODALITÉS
+
+👉 Modalité = variation par rang / placette
+
+Ex :
+
+M0 = témoin
+M1 = levain 1/4
+M2 = levain 1/2
+
+
+1.4 Associer protocole au site
+
+👉 IMPORTANT :
+
+✔️ 1 parcelle = 1 protocole
+✔️ MAIS flexible (Wilfried)
+
+
+
+🟢 2. ARRIVÉE SUR LE TERRAIN
+
+
+
+🔹 CAS 1 — TU FAIS UN TRAITEMENT
+
+
+
+🧪 SAISIE : NOUVEAU TRAITEMENT
+
+
+
+🔸 Étape 1 — Identification
+
+Site
+Parcelle
+Protocole
+Date
+Stade (A, B, C, D… ⚠️ PAS BBCH ici)
+Opérateur
+
+
+🔸 Étape 2 — Zone traitée
+
+👉 selon cas :
+
+Rang (R1, R2…)
+OU
+Surface (m² / ha)
+
+
+🔸 Étape 3 — Modalité
+
+👉 sélection obligatoire :
+
+M0 / M1 / M2…
+
+
+🔸 Étape 4 — Produits (automatiques depuis protocole)
+
+👉 MAIS tu renseignes :
+
+Dose réelle
+Volume bouillie
+pH eau
+pH bouillie
+Origine eau
+
+
+🔸 Étape 5 — Conditions météo (IMPORTANT)
+
+Heure
+Température
+Humidité
+Vent
+Couvert
+
+
+🔸 Étape 6 — Type application
+
+Pulvé à dos
+Tracteur
+Panneaux récupérateurs
+
+
+🔸 Étape 7 — Cas spécial
+
+👉 cocher :
+
+prélèvement sol (oui/non)
+
+
+🔸 Étape 8 — Notes
+
+observations terrain
+anomalies
+
+
+🟢 3. CAS 2 — TU FAIS UNE OBSERVATION
+
+
+
+👁️ SAISIE : NOUVELLE OBSERVATION
+
+
+
+🔸 Étape 1 — Identification AUTO
+
+Site
+Parcelle
+Modalité (⚠️ plus de rang ici)
+Répétition (placette 1, 2, 3…)
+
+
+🔸 Étape 2 — État de la plante
+
+👉 structure corrigée :
+
+Croissance
+
+Stade BBCH (avec aide visuelle)
+
+
+Vigueur
+
+score 0–5
+
+
+Homogénéité
+
+score 0–5
+
+
+Couleur feuilles
+
+score 0–5
+
+
+Turgescence
+
+score 0–5
+
+
+❌ supprimer :
+
+épaisseur feuilles
+
+
+🔸 Étape 3 — Symptômes négatifs
+
+brûlures
+nécroses
+déformations
+➕ ajouter :
+
+escargots (oui/non)
+acariens (oui/non)
+
+
+🔸 Étape 4 — Maladies (STRUCTURE WILFRIED)
+
+👉 mesures sur 20 feuilles
+
+
+
+Type
+
+mildiou
+oïdium
+botrytis
+black rot
+
+
+Zone
+
+feuille
+grappe
+
+
+Fréquence
+
+👉 nb feuilles atteintes → % auto
+
+
+
+Intensité
+
+👉 surface atteinte → % auto
+
+
+
+❌ supprimer :
+
+progression
+pression mildiou
+
+
+🔸 Étape 5 — Rendement (ULTRA IMPORTANT)
+
+👉 sur 10 ceps marqués
+
+nb grappes
+poids grappes
+poids 100 baies
+rendement estimé
+rendement réel
+
+
+🔸 Étape 6 — Photos
+
+OK
+
+
+🔸 Étape 7 — Commentaires
+
+OK
+
+
+🟡 4. CE QUI DOIT DISPARAÎTRE (IMPORTANT)
+
+Dans observation :
+
+❌ météo
+❌ traitement appliqué
+❌ analyse labo
+❌ scores calculés
+
+
+
+🔴 5. CE QUI DOIT ÊTRE DANS D’AUTRES ONGLETS
+
+
+
+📊 ANALYSES LABO
+
+👉 séparé
+
+👉 affiché :
+
+dans fiche site
+dans rapports
+
+
+🌦️ MÉTÉO
+
+👉 via API (plus tard)
+
+
+
+📅 REGISTRE VIGNERON
+
+👉 import ou pièce jointe
+
+
+
+🧠 6. STRUCTURE MÉTIER À RESPECTER
+
+Élément
+
+Rôle
+
+Site
+
+lieu
+
+Parcelle
+
+zone
+
+Protocole
+
+stratégie
+
+Modalité
+
+variation
+
+Traitement
+
+action
+
+Observation
+
+mesure
+
+
+
+🔥 7. IDENTIFIANT UNIQUE
+
+CLIENT-PARCELLE-PROTOCOLE-MODALITE
+
+👉 supprimer complexité inutile
+
+
+
+🧠 8. LOGIQUE UX (TRÈS IMPORTANT)
+
+👉 1 action = 1 écran
+
+
+
+écran 1
+
+Choisir :
+
+Traitement
+Observation
+
+
+écran 2
+
+Saisie simple
+
+
+
+👉 PAS de mélange
+
+
+
+🚀 9. CE QUE TU PEUX DONNER À TON FRÈRE
+
+Tu peux lui envoyer ç
+
+=“98231”}
+Voici la logique terrain finale validée avec Wilfried.
+
+Objectifs :
+
+simplifier la saisie mobile
+séparer protocole / modalité / produit
+améliorer qualité data pour IA
+À faire :
+
+remplacer “Vignoble” par “Site”
+créer onglet “Protocole”
+créer onglet “Site”
+supprimer météo / traitement / analyse labo dans observation
+structurer maladies (fréquence + intensité)
+ajouter rendement (10 ceps)
+ajouter répétitions (placettes)
+supprimer scores calculés en saisie
+afficher protocole lié à la parcelle
+UX :
+
+1 action = 1 écran
+traitement et observation séparés
+modalité choisie une seule fois
+On teste ça terra
+
+lundi.
+:::
+
+
+
+💥 MON AVIS
+
+👉 Là tu viens de faire un énorme saut :
+
+produit utilisable ✔️
+logique agronomique ✔️
+base IA propre ✔️
+
+
+
