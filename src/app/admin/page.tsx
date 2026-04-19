@@ -24,6 +24,198 @@ interface ModaliteLevainItem { id: string; code: string; label: string; dilution
 interface ProduitItem { id: string; code: string; label: string; type: string; origine: string | null; description: string | null; actif: boolean; ordre: number; }
 interface PlacetteItem { id: string; parcelle_id: string; modalite_id: string | null; nom: string; nb_ceps: number; description_position: string | null; pieds_marques: string | null; actif: boolean; }
 
+// ---- Reset Section Component ----
+function ResetSection({ showToast }: { showToast: (msg: string, type?: "success" | "error") => void }) {
+  const currentYear = new Date().getFullYear().toString();
+  const [resetMode, setResetMode] = useState<"campagne" | "periode">("campagne");
+  const [campagne, setCampagne] = useState(currentYear);
+  const [dateDebut, setDateDebut] = useState("");
+  const [dateFin, setDateFin] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [confirmStep, setConfirmStep] = useState(0); // 0=idle, 1=first confirm, 2=final confirm
+
+  async function handleReset() {
+    if (confirmStep < 2) {
+      setConfirmStep(confirmStep + 1);
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      let dateFilter: { gte: string; lte: string };
+
+      if (resetMode === "campagne") {
+        dateFilter = { gte: `${campagne}-01-01`, lte: `${campagne}-12-31` };
+      } else {
+        if (!dateDebut || !dateFin) {
+          showToast("Précise les deux dates", "error");
+          setDeleting(false);
+          setConfirmStep(0);
+          return;
+        }
+        dateFilter = { gte: dateDebut, lte: dateFin };
+      }
+
+      // 1. Supprimer maladies_observations liées aux observations de la période
+      const { data: obsIds } = await supabase
+        .from("observations")
+        .select("id")
+        .gte("date", dateFilter.gte)
+        .lte("date", dateFilter.lte);
+
+      if (obsIds && obsIds.length > 0) {
+        const ids = obsIds.map((o: { id: string }) => o.id);
+        await supabase.from("maladies_observations").delete().in("observation_id", ids);
+        await supabase.from("photos").delete().in("observation_id", ids);
+      }
+
+      // 2. Supprimer traitement_rangs liés aux traitements de la période
+      const { data: traitIds } = await supabase
+        .from("traitements")
+        .select("id")
+        .gte("date", dateFilter.gte)
+        .lte("date", dateFilter.lte);
+
+      if (traitIds && traitIds.length > 0) {
+        const ids = traitIds.map((t: { id: string }) => t.id);
+        await supabase.from("traitement_rangs").delete().in("traitement_id", ids);
+      }
+
+      // 3. Supprimer observations
+      const { error: obsErr } = await supabase
+        .from("observations")
+        .delete()
+        .gte("date", dateFilter.gte)
+        .lte("date", dateFilter.lte);
+
+      // 4. Supprimer traitements
+      const { error: traitErr } = await supabase
+        .from("traitements")
+        .delete()
+        .gte("date", dateFilter.gte)
+        .lte("date", dateFilter.lte);
+
+      // 5. Supprimer analyses_sol
+      const { error: anaErr } = await supabase
+        .from("analyses_sol")
+        .delete()
+        .gte("date_prelevement", dateFilter.gte)
+        .lte("date_prelevement", dateFilter.lte);
+
+      if (obsErr || traitErr || anaErr) {
+        showToast("Erreur lors de la suppression : " + (obsErr?.message || traitErr?.message || anaErr?.message), "error");
+      } else {
+        const label = resetMode === "campagne"
+          ? `campagne ${campagne}`
+          : `du ${new Date(dateDebut).toLocaleDateString("fr-FR")} au ${new Date(dateFin).toLocaleDateString("fr-FR")}`;
+        showToast(`Données supprimées pour ${label} ✓`);
+      }
+    } catch (err) {
+      showToast("Erreur inattendue", "error");
+    }
+    setDeleting(false);
+    setConfirmStep(0);
+  }
+
+  const confirmLabel = resetMode === "campagne"
+    ? `la campagne ${campagne}`
+    : dateDebut && dateFin
+      ? `du ${new Date(dateDebut).toLocaleDateString("fr-FR")} au ${new Date(dateFin).toLocaleDateString("fr-FR")}`
+      : "la période sélectionnée";
+
+  return (
+    <div className="glass rounded-2xl p-4 border-2 border-red-200/50 space-y-4">
+      <p className="text-xs text-gray-500">
+        Supprime toutes les observations, traitements et analyses pour une campagne complète ou une période précise.
+        Les données de structure (sites, parcelles, protocoles, modalités) ne sont pas affectées.
+      </p>
+
+      {/* Mode */}
+      <div className="flex gap-2">
+        <button type="button" onClick={() => { setResetMode("campagne"); setConfirmStep(0); }}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${resetMode === "campagne" ? "bg-red-600 text-white" : "bg-gray-100 text-gray-600"}`}>
+          Par campagne
+        </button>
+        <button type="button" onClick={() => { setResetMode("periode"); setConfirmStep(0); }}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${resetMode === "periode" ? "bg-red-600 text-white" : "bg-gray-100 text-gray-600"}`}>
+          Par période
+        </button>
+      </div>
+
+      {resetMode === "campagne" ? (
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Campagne (année)</label>
+          <select value={campagne} onChange={(e) => { setCampagne(e.target.value); setConfirmStep(0); }}
+            className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm">
+            {["2024", "2025", "2026", "2027"].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Du</label>
+            <input type="date" value={dateDebut} onChange={(e) => { setDateDebut(e.target.value); setConfirmStep(0); }}
+              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Au</label>
+            <input type="date" value={dateFin} onChange={(e) => { setDateFin(e.target.value); setConfirmStep(0); }}
+              className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation progressive */}
+      {confirmStep === 0 && (
+        <button type="button" onClick={handleReset} disabled={deleting}
+          className="w-full bg-red-100 text-red-700 rounded-xl py-3 font-semibold text-sm hover:bg-red-200 transition-colors">
+          🗑️ Effacer les données
+        </button>
+      )}
+      {confirmStep === 1 && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-3 space-y-2">
+          <p className="text-sm text-red-700 font-medium">
+            ⚠️ Êtes-vous sûr de vouloir effacer les données pour {confirmLabel} ?
+          </p>
+          <p className="text-xs text-red-600">
+            Cela supprimera toutes les observations, traitements, analyses, maladies et photos associées. Cette action est irréversible.
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setConfirmStep(0)}
+              className="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2.5 text-sm font-medium">
+              Annuler
+            </button>
+            <button type="button" onClick={handleReset}
+              className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-bold">
+              Oui, confirmer la suppression
+            </button>
+          </div>
+        </div>
+      )}
+      {confirmStep === 2 && (
+        <div className="bg-red-100 border-2 border-red-500 rounded-xl p-3 space-y-2">
+          <p className="text-sm text-red-800 font-bold">
+            🚨 DERNIÈRE CONFIRMATION — Action irréversible
+          </p>
+          <p className="text-xs text-red-700">
+            Toutes les données pour {confirmLabel} seront définitivement supprimées.
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setConfirmStep(0)}
+              className="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2.5 text-sm font-medium">
+              Annuler
+            </button>
+            <button type="button" onClick={handleReset} disabled={deleting}
+              className="flex-1 bg-red-700 text-white rounded-xl py-2.5 text-sm font-bold disabled:opacity-50">
+              {deleting ? "Suppression en cours…" : "🗑️ SUPPRIMER DÉFINITIVEMENT"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -656,6 +848,10 @@ export default function AdminPage() {
           </div>
         ))}
       </AdminCard>
+
+      {/* ---- RESET DONNÉES ---- */}
+      <h2 className="text-lg font-bold text-red-600 mt-6">🗑️ Reset données</h2>
+      <ResetSection showToast={showToast} />
 
       {/* ---- MODALS ---- */}
 
