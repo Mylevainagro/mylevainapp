@@ -175,7 +175,7 @@ export default function AdminPage() {
   // ---- CRUD Parcelles ----
   async function saveParcelle() {
     setSaving(true); const d = modal?.data;
-    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null };
+    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null };
     if (d.id) { await supabase.from("parcelles").update(payload).eq("id", d.id); showToast("Parcelle modifiée"); }
     else { const { error } = await supabase.from("parcelles").insert(payload); if (error) showToast(error.message, "error"); else showToast("Parcelle ajoutée"); }
     setSaving(false); setModal(null);
@@ -468,27 +468,29 @@ export default function AdminPage() {
 
       {/* Modal Parcelle */}
       <EditModal open={modal?.type === "parcelle"} title={modal?.data?.id ? "Modifier parcelle" : "Nouvelle parcelle"} onClose={() => setModal(null)} onSave={saveParcelle} saving={saving}>
-        <label className="text-sm font-medium">Nom *</label>
-        <input value={modal?.data?.nom || ""} onChange={e => updateModal("nom", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Merlot 3" />
         <label className="text-sm font-medium">Site *</label>
         <select value={modal?.data?.site_id || ""} onChange={e => updateModal("site_id", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">Sélectionner…</option>
           {sites.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
         </select>
-        <label className="text-sm font-medium">Surface (ha)</label>
-        <input type="number" step="0.01" value={modal?.data?.surface ?? ""} onChange={e => updateModal("surface", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <label className="text-sm font-medium">Culture</label>
+        <label className="text-sm font-medium">Culture *</label>
         <select value={modal?.data?.culture_id || modal?.data?.type_culture || ""} onChange={e => { updateModal("culture_id", e.target.value); updateModal("type_culture", e.target.value ? cultures.find(c => c.id === e.target.value)?.code ?? "" : ""); }} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">Sélectionner…</option>
           {cultures.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
         </select>
-        <label className="text-sm font-medium">Variété</label>
-        <input value={modal?.data?.variete || ""} onChange={e => updateModal("variete", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Merlot, Tomate Roma" />
+        <label className="text-sm font-medium">{cultures.find(c => c.id === modal?.data?.culture_id)?.code === 'vigne' ? 'Appellation / Cépage' : 'Variété'}</label>
+        <input value={modal?.data?.variete || ""} onChange={e => updateModal("variete", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder={cultures.find(c => c.id === modal?.data?.culture_id)?.code === 'vigne' ? 'ex: Merlot, Saint-Émilion Grand Cru' : 'ex: Roma, Golden'} />
+        <label className="text-sm font-medium">Nom de la parcelle *</label>
+        <input value={modal?.data?.nom || ""} onChange={e => updateModal("nom", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Merlot 3, Champ Nord" />
+        <label className="text-sm font-medium">Surface (ha)</label>
+        <input type="number" step="0.01" value={modal?.data?.surface ?? ""} onChange={e => updateModal("surface", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
         <label className="text-sm font-medium">Type de sol</label>
         <select value={modal?.data?.sol || ""} onChange={e => updateModal("sol", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">Sélectionner…</option>
           {TYPE_SOL.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
+        <label className="text-sm font-medium">Commentaire</label>
+        <textarea value={modal?.data?.commentaire || ""} onChange={e => updateModal("commentaire", e.target.value)} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Notes libres sur la parcelle…" />
       </EditModal>
 
       {/* Modal Placette */}
