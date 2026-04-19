@@ -4,17 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { useDemo } from "@/components/DemoProvider";
-import { DEMO_TRAITEMENTS } from "@/lib/demo-data";
+import { DEMO_TRAITEMENTS, DEMO_VIGNOBLES, DEMO_PARCELLES } from "@/lib/demo-data";
 import { Traitement } from "@/lib/types";
 import { ListSkeleton } from "@/components/Skeleton";
 import { SelectField } from "@/components/ui/SelectField";
-import { filterTraitements } from "@/lib/traitements";
 
-const CAMPAGNE_OPTIONS = ["2023", "2024", "2025", "2026"] as const;
-const TYPE_TRAITEMENT_OPTIONS = [
-  "cuivre", "soufre", "levain", "biocontrole",
-  "phytosanitaire", "fertilisation", "autre",
-] as const;
+const CAMPAGNE_OPTIONS = ["2024", "2025", "2026", "2027"] as const;
 
 function DetailRow({ label, value, unit }: { label: string; value: unknown; unit?: string }) {
   if (value === null || value === undefined || value === "") return null;
@@ -32,77 +27,56 @@ function TraitementDetail({ t }: { t: Traitement }) {
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 animate-fadeIn">
-      {/* Résumé rapide */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-amber-50 rounded-xl px-3 py-2 text-center">
           <div className="text-sm font-bold text-amber-700">{jourDepuis}j</div>
           <div className="text-[10px] text-amber-600">depuis</div>
         </div>
-        {t.type_traitement && (
-          <div className="bg-emerald-50 rounded-xl px-3 py-2 text-center">
-            <div className="text-sm font-bold text-emerald-700">{t.type_traitement}</div>
-            <div className="text-[10px] text-emerald-600">type</div>
-          </div>
-        )}
         {t.stade && (
           <div className="bg-blue-50 rounded-xl px-3 py-2 text-center">
             <div className="text-sm font-bold text-blue-700">Stade {t.stade}</div>
             <div className="text-[10px] text-blue-600">phénologique</div>
           </div>
         )}
+        {t.mode && (
+          <div className="bg-emerald-50 rounded-xl px-3 py-2 text-center">
+            <div className="text-sm font-bold text-emerald-700">{t.mode === 'rang' ? `${t.nb_rangs || '?'} rangs` : `${t.surface_ha || '?'} ha`}</div>
+            <div className="text-[10px] text-emerald-600">{t.mode}</div>
+          </div>
+        )}
       </div>
 
-      {/* Zone traitée */}
-      {(t.zone_traitee_type || t.type_application) && (
+      {(t.type_application || t.operateur) && (
         <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">🗺️ Zone & Application</div>
-          <DetailRow label="Zone" value={t.zone_traitee_type === 'rang' ? `Rang ${t.zone_traitee_rang ?? ''}` : t.zone_traitee_surface_m2 ? `${t.zone_traitee_surface_m2} m²` : null} />
-          <DetailRow label="Type application" value={t.type_application ? typeAppLabels[t.type_application] ?? t.type_application : null} />
+          <div className="text-xs font-semibold text-gray-600 mb-1.5">🗺️ Application</div>
+          <DetailRow label="Type" value={t.type_application ? typeAppLabels[t.type_application] ?? t.type_application : null} />
           <DetailRow label="Opérateur" value={t.operateur} />
         </div>
       )}
 
-      {/* Produit & pH */}
-      <div className="glass rounded-xl p-3">
-        <div className="text-xs font-semibold text-gray-600 mb-1.5">🧪 Produit & pH</div>
-        <DetailRow label="Produit" value={t.produit} />
-        <DetailRow label="Dose" value={t.dose} />
-        <DetailRow label="Volume bouillie" value={t.volume_bouillie_l} unit="L" />
-        <DetailRow label="pH eau" value={t.ph_eau} />
-        <DetailRow label="pH bouillie" value={t.ph_bouillie} />
-        <DetailRow label="Origine eau" value={t.origine_eau} />
-      </div>
-
-      {/* Détails traitement */}
-      {(t.matiere_active || t.concentration !== null || t.objectif) && (
+      {(t.volume_bouillie_l || t.ph_eau || t.ph_bouillie) && (
         <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">🔬 Détails</div>
-          <DetailRow label="Matière active" value={t.matiere_active} />
-          <DetailRow label="Concentration" value={t.concentration} unit={t.unite ?? ""} />
-          <DetailRow label="Objectif" value={t.objectif} />
+          <div className="text-xs font-semibold text-gray-600 mb-1.5">⚗️ Paramètres</div>
+          <DetailRow label="Volume bouillie" value={t.volume_bouillie_l} unit="L/ha" />
+          <DetailRow label="pH eau" value={t.ph_eau} />
+          <DetailRow label="pH bouillie" value={t.ph_bouillie} />
+          <DetailRow label="Origine eau" value={t.origine_eau} />
         </div>
       )}
 
-      {/* Conditions météo */}
       {(t.temperature !== null || t.humidite !== null || t.couvert) && (
         <div className="glass rounded-xl p-3">
           <div className="text-xs font-semibold text-gray-600 mb-1.5">🌤️ Conditions</div>
           <DetailRow label="Température" value={t.temperature} unit="°C" />
           <DetailRow label="Humidité" value={t.humidite} unit="%" />
           <DetailRow label="Couvert" value={t.couvert} />
-          <DetailRow label="Météo" value={t.conditions_meteo} />
         </div>
       )}
 
-      {/* Cas spécial */}
       {t.prelevement_sol && (
-        <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">🔍 Cas spécial</div>
-          <DetailRow label="Prélèvement sol" value="Oui 🧪" />
-        </div>
+        <div className="bg-blue-50 rounded-xl px-3 py-2 text-xs text-blue-700 font-medium">🧪 Prélèvement sol effectué</div>
       )}
 
-      {/* Notes */}
       {t.notes && (
         <div className="glass rounded-xl p-3">
           <div className="text-xs font-semibold text-gray-600 mb-1">💬 Notes</div>
@@ -113,75 +87,121 @@ function TraitementDetail({ t }: { t: Traitement }) {
   );
 }
 
+interface SiteMap { [id: string]: string }
+interface ParcelleMap { [id: string]: { nom: string; site_id: string } }
+
 export default function TraitementsPage() {
   const { isDemo } = useDemo();
   const [traitements, setTraitements] = useState<Traitement[]>([]);
+  const [siteNames, setSiteNames] = useState<SiteMap>({});
+  const [parcelleInfo, setParcelleInfo] = useState<ParcelleMap>({});
   const [loading, setLoading] = useState(true);
-  const [campagneFilter, setCampagneFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [campagne, setCampagne] = useState(new Date().getFullYear().toString());
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isDemo) {
       setTraitements(DEMO_TRAITEMENTS);
+      const sm: SiteMap = {};
+      for (const v of DEMO_VIGNOBLES) sm[v.id] = v.nom;
+      setSiteNames(sm);
+      const pm: ParcelleMap = {};
+      for (const p of DEMO_PARCELLES) pm[p.id] = { nom: p.nom, site_id: p.vignoble_id };
+      setParcelleInfo(pm);
       setLoading(false);
       return;
     }
     async function load() {
-      const { data, error } = await supabase
-        .from("traitements")
-        .select("*")
-        .order("date", { ascending: false })
-        .limit(50);
-      if (!error && data) setTraitements(data as Traitement[]);
+      const [tRes, sRes, pRes] = await Promise.all([
+        supabase.from("traitements").select("*").order("date", { ascending: false }).limit(50),
+        supabase.from("sites").select("id, nom"),
+        supabase.from("parcelles").select("id, nom, site_id, vignoble_id"),
+      ]);
+      if (!tRes.error && tRes.data) setTraitements(tRes.data as Traitement[]);
+      const sm: SiteMap = {};
+      for (const s of sRes.data ?? []) sm[s.id] = s.nom;
+      // Also load vignobles for legacy parcelles
+      const { data: vigData } = await supabase.from("vignobles").select("id, nom");
+      for (const v of vigData ?? []) sm[v.id] = v.nom;
+      setSiteNames(sm);
+      const pm: ParcelleMap = {};
+      for (const p of (pRes.data ?? []) as { id: string; nom: string; site_id: string | null; vignoble_id: string }[]) {
+        pm[p.id] = { nom: p.nom, site_id: p.site_id || p.vignoble_id };
+      }
+      setParcelleInfo(pm);
       setLoading(false);
     }
     load();
   }, [isDemo]);
 
+  // Filter by campagne
   const filtered = useMemo(() => {
-    const filters: { campagne?: string; type_traitement?: string } = {};
-    if (campagneFilter) filters.campagne = campagneFilter;
-    if (typeFilter) filters.type_traitement = typeFilter;
-    return filterTraitements(traitements, filters);
-  }, [traitements, campagneFilter, typeFilter]);
+    if (!campagne) return traitements;
+    return traitements.filter(t => t.campagne === campagne || t.date?.startsWith(campagne));
+  }, [traitements, campagne]);
+
+  // Deduplicate by date (group multi-rang into one entry)
+  const grouped = useMemo(() => {
+    const map = new Map<string, { traitement: Traitement; count: number }>();
+    for (const t of filtered) {
+      const key = `${t.parcelle_id}-${t.date}`;
+      if (!map.has(key)) {
+        map.set(key, { traitement: t, count: 1 });
+      } else {
+        map.get(key)!.count++;
+      }
+    }
+    return Array.from(map.values());
+  }, [filtered]);
+
+  function getSiteName(parcelleId: string): string {
+    const p = parcelleInfo[parcelleId];
+    if (!p) return "—";
+    return siteNames[p.site_id] || "—";
+  }
+
+  function getParcelleName(parcelleId: string): string {
+    return parcelleInfo[parcelleId]?.nom || "—";
+  }
 
   return (
     <div>
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold gradient-text">💧 Traitements</h1>
-        <Link href="/traitements/new" className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl px-4 py-2 text-sm font-medium shadow-sm active:scale-95">
-          + Nouveau
-        </Link>
+        <SelectField label="" value={campagne} onChange={setCampagne} options={[...CAMPAGNE_OPTIONS]} placeholder="Campagne" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <SelectField label="Campagne" value={campagneFilter} onChange={setCampagneFilter} options={CAMPAGNE_OPTIONS} placeholder="Toutes" />
-        <SelectField label="Type" value={typeFilter} onChange={setTypeFilter} options={TYPE_TRAITEMENT_OPTIONS} placeholder="Tous" />
-      </div>
+      {/* Action principale */}
+      <Link
+        href="/traitements/new"
+        className="block w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl py-4 text-center font-semibold text-base shadow-lg shadow-amber-200/40 active:scale-[0.98] transition-all mb-6"
+      >
+        🧪 Enregistrer un traitement
+      </Link>
 
-      <p className="text-xs text-gray-400 mb-2">{filtered.length} traitement{filtered.length !== 1 ? "s" : ""}</p>
+      {/* Historique récent */}
+      <h2 className="text-sm font-semibold text-gray-600 mb-2">Historique récent</h2>
+      <p className="text-xs text-gray-400 mb-3">{grouped.length} traitement{grouped.length !== 1 ? "s" : ""} · Campagne {campagne}</p>
 
       {loading ? (
-        <ListSkeleton count={3} />
-      ) : filtered.length === 0 ? (
-        traitements.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-4xl mb-3">💧</div>
-            <p className="text-gray-400 mb-4">Aucun traitement enregistré</p>
-            <Link href="/traitements/new" className="inline-block btn-secondary px-6 !py-3 !text-sm">
-              Enregistrer le premier traitement →
-            </Link>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-400">Aucun traitement ne correspond aux filtres</p>
-          </div>
-        )
+        <ListSkeleton count={5} />
+      ) : grouped.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="text-4xl mb-3">💧</div>
+          <p className="text-gray-400 mb-4">Aucun traitement pour cette campagne</p>
+          <Link href="/traitements/new" className="inline-block btn-secondary px-6 !py-3 !text-sm">
+            Enregistrer le premier traitement →
+          </Link>
+        </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((t) => {
+          {grouped.map(({ traitement: t, count }) => {
             const isExpanded = expandedId === t.id;
+            const zoneLabel = t.mode === 'surface'
+              ? `${t.surface_ha || '?'} ha`
+              : `${t.nb_rangs || count} rang${(t.nb_rangs || count) > 1 ? 's' : ''}`;
+
             return (
               <div
                 key={t.id}
@@ -193,36 +213,37 @@ export default function TraitementsPage() {
                   className="w-full text-left"
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium text-sm">
-                        Rang {t.rang} — <span className="text-amber-700">{t.modalite}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">
+                        {getSiteName(t.parcelle_id)} · <span className="text-amber-700">{getParcelleName(t.parcelle_id)}</span>
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         {new Date(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                         {t.stade && ` · Stade ${t.stade}`}
-                        {t.dose && ` — ${t.dose}`}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {t.type_traitement && (
-                        <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
-                          {t.type_traitement}
-                        </span>
-                      )}
-                      <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                        {t.produit}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                        {zoneLabel}
                       </span>
-                      <span className={`text-gray-400 text-sm transition-transform ${isExpanded ? "rotate-180" : ""}`}>
-                        ▾
-                      </span>
+                      <span className={`text-gray-400 text-sm transition-transform ${isExpanded ? "rotate-180" : ""}`}>▾</span>
                     </div>
                   </div>
-                  {!isExpanded && t.notes && (
-                    <p className="text-xs text-gray-400 mt-1.5 line-clamp-1">{t.notes}</p>
-                  )}
                 </button>
 
-                {isExpanded && <TraitementDetail t={t} />}
+                {isExpanded && (
+                  <>
+                    <TraitementDetail t={t} />
+                    <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
+                      <Link
+                        href={`/traitements/new?from=${t.id}`}
+                        className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors"
+                      >
+                        🔄 Reprendre ce traitement
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
