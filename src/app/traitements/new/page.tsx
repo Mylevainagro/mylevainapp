@@ -322,7 +322,15 @@ export default function NewTraitementPage() {
           <>
             {/* ===== Étape 4 — Nombre de rangs ===== */}
             <Section title="4. Nombre de rangs" icon="🔢" defaultOpen={true}>
-              <NumberField label="Nombre de rangs" value={nbRangs} onChange={(v) => setNbRangs(v ?? 1)} min={1} max={20} />
+              <select
+                value={nbRangs}
+                onChange={(e) => setNbRangs(Number(e.target.value))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm"
+              >
+                {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n} rang{n > 1 ? "s" : ""}</option>
+                ))}
+              </select>
               <p className="text-xs text-gray-400">{rangs.length} rang(s) générés automatiquement</p>
             </Section>
 
