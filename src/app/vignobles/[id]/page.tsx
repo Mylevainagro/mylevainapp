@@ -3,20 +3,8 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useDemo } from "@/components/DemoProvider";
-import { DEMO_VIGNOBLES, DEMO_PARCELLES, DEMO_ANALYSES } from "@/lib/demo-data";
-import { MODALITES_REF } from "@/lib/constants";
+import { DEMO_VIGNOBLES, DEMO_PARCELLES, DEMO_ANALYSES, DEMO_PLACETTES, DEMO_OBSERVATIONS, DEMO_TRAITEMENTS } from "@/lib/demo-data";
 import { DernierTraitementCard } from "@/components/traitements/DernierTraitementCard";
-
-const VIGNOBLES_DATA: Record<string, { nom: string; localisation: string; parcelles: { id: string; nom: string }[] }> = {
-  "a1000000-0000-0000-0000-000000000001": {
-    nom: "Piotte", localisation: "Bordeaux",
-    parcelles: [{ id: "b1000000-0000-0000-0000-000000000001", nom: "Parcelle principale" }],
-  },
-  "a1000000-0000-0000-0000-000000000002": {
-    nom: "Pape Clément", localisation: "Pessac-Léognan",
-    parcelles: [{ id: "b1000000-0000-0000-0000-000000000002", nom: "Parcelle test" }],
-  },
-};
 
 function AnalyseSolCard({ analyse }: { analyse: typeof DEMO_ANALYSES[0] }) {
   return (
@@ -46,64 +34,46 @@ function AnalyseSolCard({ analyse }: { analyse: typeof DEMO_ANALYSES[0] }) {
             <span className="font-medium">{analyse.cuivre_total} mg/kg</span>
           </div>
         )}
-        {analyse.cuivre_biodisponible != null && (
-          <div className="flex justify-between py-1 border-b border-gray-50">
-            <span className="text-gray-500">Cu biodispo.</span>
-            <span className="font-medium">{analyse.cuivre_biodisponible} mg/kg</span>
-          </div>
-        )}
         {analyse.biomasse_microbienne != null && (
           <div className="flex justify-between py-1 border-b border-gray-50">
             <span className="text-gray-500">Biomasse</span>
             <span className="font-medium">{analyse.biomasse_microbienne}</span>
           </div>
         )}
-        {analyse.respiration_sol != null && (
-          <div className="flex justify-between py-1 border-b border-gray-50">
-            <span className="text-gray-500">Respiration</span>
-            <span className="font-medium">{analyse.respiration_sol}</span>
-          </div>
-        )}
-        {analyse.calcium != null && (
-          <div className="flex justify-between py-1 border-b border-gray-50">
-            <span className="text-gray-500">Calcium</span>
-            <span className="font-medium">{analyse.calcium}</span>
-          </div>
-        )}
-        {analyse.magnesium != null && (
-          <div className="flex justify-between py-1 border-b border-gray-50">
-            <span className="text-gray-500">Magnésium</span>
-            <span className="font-medium">{analyse.magnesium}</span>
-          </div>
-        )}
       </div>
-      {analyse.score_contamination_metaux != null && (
-        <div className="text-xs text-gray-500">
-          Score contamination métaux : <span className="font-medium text-orange-600">{analyse.score_contamination_metaux}/5</span>
-        </div>
-      )}
     </div>
   );
+}
+
+function formatDate(d: string | null): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 export default function VignoblePage() {
   const { id } = useParams<{ id: string }>();
   const { isDemo } = useDemo();
 
-  // In demo mode, look up from demo data
   const demoSite = isDemo ? DEMO_VIGNOBLES.find((v) => v.id === id) : null;
   const demoParcelles = isDemo ? DEMO_PARCELLES.filter((p) => p.vignoble_id === id) : [];
-  const demoAnalyses = isDemo ? DEMO_ANALYSES : [];
+  const demoAnalyses = isDemo ? DEMO_ANALYSES.filter((a) => demoParcelles.some(p => p.id === a.parcelle_id)) : [];
+  const demoPlacettes = isDemo ? (DEMO_PLACETTES ?? []).filter((pl) => demoParcelles.some(p => p.id === pl.parcelle_id)) : [];
 
-  // In real mode, use hardcoded data (legacy)
-  const realSite = !isDemo ? VIGNOBLES_DATA[id] : null;
+  // Last obs/trait dates per parcelle
+  const lastObsDates: Record<string, string> = {};
+  const lastTraitDates: Record<string, string> = {};
+  if (isDemo) {
+    for (const o of DEMO_OBSERVATIONS) {
+      if (!lastObsDates[o.parcelle_id] || o.date > lastObsDates[o.parcelle_id]) lastObsDates[o.parcelle_id] = o.date;
+    }
+    for (const t of DEMO_TRAITEMENTS) {
+      if (!lastTraitDates[t.parcelle_id] || t.date > lastTraitDates[t.parcelle_id]) lastTraitDates[t.parcelle_id] = t.date;
+    }
+  }
 
-  const siteName = demoSite?.nom ?? realSite?.nom;
-  const siteLocation = demoSite?.localisation ?? realSite?.localisation;
-  const siteType = demoSite?.appellation ?? null;
-  const parcelles = isDemo
-    ? demoParcelles.map((p) => ({ id: p.id, nom: p.nom, detail: p.cepage }))
-    : (realSite?.parcelles ?? []).map((p) => ({ id: p.id, nom: p.nom, detail: null }));
+  const siteName = demoSite?.nom;
+  const siteLocation = demoSite?.localisation;
+  const siteType = demoSite?.appellation;
 
   if (!siteName) {
     return (
@@ -122,25 +92,52 @@ export default function VignoblePage() {
       <p className="text-sm text-gray-500">{siteLocation}</p>
       {siteType && <p className="text-xs text-amber-600 font-medium mt-0.5">{siteType}</p>}
 
-      {/* Parcelles / Zones */}
-      <h2 className="text-lg font-bold text-gray-800 mt-6 mb-3">Parcelles</h2>
+      {/* Parcelles */}
+      <h2 className="text-lg font-bold text-gray-800 mt-6 mb-3">🌿 Parcelles</h2>
       <div className="space-y-3 mb-6">
-        {parcelles.map((p) => (
-          <div key={p.id} className="space-y-2">
-            <div className="glass rounded-2xl p-4">
-              <div className="font-medium text-gray-800">{p.nom}</div>
-              {p.detail && <div className="text-xs text-gray-500 mt-0.5">{p.detail}</div>}
+        {demoParcelles.map((p) => {
+          const parcellePlacettes = demoPlacettes.filter(pl => pl.parcelle_id === p.id);
+          return (
+            <div key={p.id} className="glass rounded-2xl p-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium text-gray-800">{p.nom}</div>
+                  <div className="text-xs text-gray-500">
+                    {p.cepage || p.variete || "—"}
+                    {p.surface && ` · ${p.surface} ha`}
+                    {p.sol && ` · ${p.sol}`}
+                  </div>
+                </div>
+              </div>
+              {/* Dernières dates */}
+              <div className="flex gap-4 text-xs text-gray-500">
+                <span>📝 Obs : <strong className="text-gray-700">{formatDate(lastObsDates[p.id])}</strong></span>
+                <span>💧 Trait : <strong className="text-gray-700">{formatDate(lastTraitDates[p.id])}</strong></span>
+              </div>
+              {/* Placettes */}
+              {parcellePlacettes.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">📌 Placettes</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {parcellePlacettes.map(pl => (
+                      <span key={pl.id} className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                        {pl.nom} · {pl.nb_ceps} ceps{pl.modalite_id && ` · ${pl.modalite_id}`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!isDemo && <DernierTraitementCard parcelleId={p.id} />}
             </div>
-            {!isDemo && <DernierTraitementCard parcelleId={p.id} />}
-          </div>
-        ))}
-        {parcelles.length === 0 && (
+          );
+        })}
+        {demoParcelles.length === 0 && (
           <p className="text-sm text-gray-400">Aucune parcelle pour ce site</p>
         )}
       </div>
 
-      {/* Analyses sol (demo) */}
-      {isDemo && demoAnalyses.length > 0 && (
+      {/* Analyses sol */}
+      {demoAnalyses.length > 0 && (
         <>
           <h2 className="text-lg font-bold text-gray-800 mb-3">🧪 Analyses de sol</h2>
           <div className="space-y-3 mb-6">
@@ -150,25 +147,6 @@ export default function VignoblePage() {
           </div>
         </>
       )}
-
-      {/* Protocole */}
-      <h2 className="text-lg font-bold text-gray-800 mb-3">Protocole — 7 rangs</h2>
-      <div className="space-y-2 mb-6">
-        {MODALITES_REF.map((m) => (
-          <div key={m.rang} className="glass rounded-2xl p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">
-              {m.rang}
-            </div>
-            <div className="flex-1">
-              <div className="font-medium text-sm text-gray-800">{m.modalite}</div>
-              <div className="text-xs text-gray-400">{m.description}</div>
-            </div>
-            <div className="text-xs text-gray-400 font-mono">
-              {m.volume_l > 0 ? `${m.volume_l}L` : "—"}
-            </div>
-          </div>
-        ))}
-      </div>
 
       {/* Actions */}
       <div className="grid grid-cols-2 gap-3">
