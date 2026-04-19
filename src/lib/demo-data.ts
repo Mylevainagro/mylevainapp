@@ -3,7 +3,7 @@
 // Adapté structure terrain Wilfried — Avril 2026
 // ============================================================
 
-import type { Observation, Traitement, AnalyseSol, Modalite } from './types';
+import type { Observation, Traitement, AnalyseSol, Modalite, MaladieObservation } from './types';
 
 // ---- Vignobles & Parcelles ----
 
@@ -196,6 +196,69 @@ function genAnalyses(): AnalyseSol[] {
   ];
 }
 
+// ---- Maladies observations v2 (structure Wilfried — 20 feuilles) ----
+
+function genMaladies(): MaladieObservation[] {
+  const maladies: MaladieObservation[] = [];
+  let idx = 0;
+
+  for (const passage of MOIS_PASSAGES) {
+    for (const mr of MODALITES_RANGS) {
+      const obsId = `demo-obs-${MOIS_PASSAGES.indexOf(passage) * MODALITES_RANGS.length + MODALITES_RANGS.indexOf(mr) + 1}`;
+      const isLevain = mr.modalite.includes('Levain');
+      const isCuivre = mr.modalite.includes('Cuivre');
+      const monthIdx = MOIS_PASSAGES.indexOf(passage);
+
+      // Mildiou — plus présent sur témoins, moins sur levain+cuivre
+      const mildiouFeuilles = isLevain ? (isCuivre ? 1 + monthIdx : 2 + monthIdx) : 4 + monthIdx * 2;
+      const mildiouSurface = isLevain ? (isCuivre ? 5 : 10) : 20 + monthIdx * 5;
+      idx++;
+      maladies.push({
+        id: `demo-mal-${idx}`,
+        observation_id: obsId,
+        type: 'mildiou',
+        zone: 'feuille',
+        nb_feuilles_atteintes: Math.min(20, mildiouFeuilles),
+        frequence_pct: Math.round(Math.min(20, mildiouFeuilles) / 20 * 100 * 10) / 10,
+        surface_atteinte_pct: mildiouSurface,
+        intensite_pct: Math.round(Math.min(20, mildiouFeuilles) / 20 * mildiouSurface / 100 * 100 * 10) / 10,
+      });
+
+      // Oïdium — apparaît en juin/juillet sur témoins
+      if (monthIdx >= 1 && !isLevain) {
+        idx++;
+        const oidiumFeuilles = 2 + monthIdx;
+        maladies.push({
+          id: `demo-mal-${idx}`,
+          observation_id: obsId,
+          type: 'oidium',
+          zone: 'feuille',
+          nb_feuilles_atteintes: oidiumFeuilles,
+          frequence_pct: Math.round(oidiumFeuilles / 20 * 100 * 10) / 10,
+          surface_atteinte_pct: 8,
+          intensite_pct: Math.round(oidiumFeuilles / 20 * 8 / 100 * 100 * 10) / 10,
+        });
+      }
+
+      // Botrytis — apparaît en juillet sur grappes témoins
+      if (monthIdx === 2 && !isLevain) {
+        idx++;
+        maladies.push({
+          id: `demo-mal-${idx}`,
+          observation_id: obsId,
+          type: 'botrytis',
+          zone: 'grappe',
+          nb_feuilles_atteintes: 3,
+          frequence_pct: 15,
+          surface_atteinte_pct: 12,
+          intensite_pct: 1.8,
+        });
+      }
+    }
+  }
+  return maladies;
+}
+
 export const DEMO_STATS = {
   nb_observations: 21,
   nb_traitements: 24,
@@ -216,3 +279,4 @@ export const DEMO_STATS = {
 export const DEMO_OBSERVATIONS = genObservations();
 export const DEMO_TRAITEMENTS = genTraitements();
 export const DEMO_ANALYSES = genAnalyses();
+export const DEMO_MALADIES = genMaladies();

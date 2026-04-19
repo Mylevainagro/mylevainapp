@@ -28,6 +28,7 @@ function DetailRow({ label, value, unit }: { label: string; value: unknown; unit
 
 function TraitementDetail({ t }: { t: Traitement }) {
   const jourDepuis = Math.floor((Date.now() - new Date(t.date).getTime()) / (1000 * 60 * 60 * 24));
+  const typeAppLabels: Record<string, string> = { pulve_dos: 'Pulvé à dos', tracteur: 'Tracteur', panneaux_recuperateurs: 'Panneaux récupérateurs' };
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 animate-fadeIn">
@@ -43,24 +44,36 @@ function TraitementDetail({ t }: { t: Traitement }) {
             <div className="text-[10px] text-emerald-600">type</div>
           </div>
         )}
-        {t.campagne && (
+        {t.stade && (
           <div className="bg-blue-50 rounded-xl px-3 py-2 text-center">
-            <div className="text-sm font-bold text-blue-700">{t.campagne}</div>
-            <div className="text-[10px] text-blue-600">campagne</div>
+            <div className="text-sm font-bold text-blue-700">Stade {t.stade}</div>
+            <div className="text-[10px] text-blue-600">phénologique</div>
           </div>
         )}
       </div>
 
-      {/* Produit & Application */}
+      {/* Zone traitée */}
+      {(t.zone_traitee_type || t.type_application) && (
+        <div className="glass rounded-xl p-3">
+          <div className="text-xs font-semibold text-gray-600 mb-1.5">🗺️ Zone & Application</div>
+          <DetailRow label="Zone" value={t.zone_traitee_type === 'rang' ? `Rang ${t.zone_traitee_rang ?? ''}` : t.zone_traitee_surface_m2 ? `${t.zone_traitee_surface_m2} m²` : null} />
+          <DetailRow label="Type application" value={t.type_application ? typeAppLabels[t.type_application] ?? t.type_application : null} />
+          <DetailRow label="Opérateur" value={t.operateur} />
+        </div>
+      )}
+
+      {/* Produit & pH */}
       <div className="glass rounded-xl p-3">
-        <div className="text-xs font-semibold text-gray-600 mb-1.5">🧪 Produit & Application</div>
+        <div className="text-xs font-semibold text-gray-600 mb-1.5">🧪 Produit & pH</div>
         <DetailRow label="Produit" value={t.produit} />
         <DetailRow label="Dose" value={t.dose} />
-        <DetailRow label="Méthode" value={t.methode_application} />
-        <DetailRow label="Opérateur" value={t.operateur} />
+        <DetailRow label="Volume bouillie" value={t.volume_bouillie_l} unit="L" />
+        <DetailRow label="pH eau" value={t.ph_eau} />
+        <DetailRow label="pH bouillie" value={t.ph_bouillie} />
+        <DetailRow label="Origine eau" value={t.origine_eau} />
       </div>
 
-      {/* Détails traitement (Phase 2) */}
+      {/* Détails traitement */}
       {(t.matiere_active || t.concentration !== null || t.objectif) && (
         <div className="glass rounded-xl p-3">
           <div className="text-xs font-semibold text-gray-600 mb-1.5">🔬 Détails</div>
@@ -71,12 +84,21 @@ function TraitementDetail({ t }: { t: Traitement }) {
       )}
 
       {/* Conditions météo */}
-      {(t.temperature !== null || t.humidite !== null || t.conditions_meteo) && (
+      {(t.temperature !== null || t.humidite !== null || t.couvert) && (
         <div className="glass rounded-xl p-3">
           <div className="text-xs font-semibold text-gray-600 mb-1.5">🌤️ Conditions</div>
           <DetailRow label="Température" value={t.temperature} unit="°C" />
           <DetailRow label="Humidité" value={t.humidite} unit="%" />
+          <DetailRow label="Couvert" value={t.couvert} />
           <DetailRow label="Météo" value={t.conditions_meteo} />
+        </div>
+      )}
+
+      {/* Cas spécial */}
+      {t.prelevement_sol && (
+        <div className="glass rounded-xl p-3">
+          <div className="text-xs font-semibold text-gray-600 mb-1.5">🔍 Cas spécial</div>
+          <DetailRow label="Prélèvement sol" value="Oui 🧪" />
         </div>
       )}
 
@@ -177,6 +199,7 @@ export default function TraitementsPage() {
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         {new Date(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        {t.stade && ` · Stade ${t.stade}`}
                         {t.dose && ` — ${t.dose}`}
                       </div>
                     </div>

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useDemo } from "@/components/DemoProvider";
-import { DEMO_OBSERVATIONS } from "@/lib/demo-data";
-import { Observation } from "@/lib/types";
+import { DEMO_OBSERVATIONS, DEMO_MALADIES } from "@/lib/demo-data";
+import { Observation, MaladieObservation } from "@/lib/types";
 import { SelectField } from "@/components/ui/SelectField";
 import { ListSkeleton } from "@/components/Skeleton";
 
@@ -20,7 +20,10 @@ function DetailRow({ label, value, unit }: { label: string; value: unknown; unit
   );
 }
 
-function ObservationDetail({ obs }: { obs: Observation }) {
+function ObservationDetail({ obs, maladies }: { obs: Observation; maladies: MaladieObservation[] }) {
+  const typeLabels: Record<string, string> = { mildiou: 'Mildiou', oidium: 'Oïdium', botrytis: 'Botrytis', black_rot: 'Black Rot' };
+  const zoneLabels: Record<string, string> = { feuille: 'Feuille', grappe: 'Grappe' };
+
   return (
     <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 animate-fadeIn">
       {/* Stade & Répétition */}
@@ -56,6 +59,25 @@ function ObservationDetail({ obs }: { obs: Observation }) {
         </div>
       )}
 
+      {/* Maladies v2 */}
+      {maladies.length > 0 && (
+        <div className="glass rounded-xl p-3">
+          <div className="text-xs font-semibold text-gray-600 mb-1.5">🦠 Maladies (sur 20 feuilles)</div>
+          {maladies.map((m, i) => (
+            <div key={i} className="bg-gray-50 rounded-lg p-2 mb-1.5 last:mb-0">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-medium text-gray-800">{typeLabels[m.type] ?? m.type} — {zoneLabels[m.zone] ?? m.zone}</span>
+              </div>
+              <div className="flex gap-3 text-[10px]">
+                <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">Fréq: {m.frequence_pct}%</span>
+                <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded">Intens: {m.intensite_pct}%</span>
+                <span className="text-gray-500">{m.nb_feuilles_atteintes}/20 · {m.surface_atteinte_pct}% surface</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Grappes & Rendement */}
       {(obs.nb_grappes_par_cep !== null || obs.nombre_grappes !== null || obs.rendement_estime !== null) && (
         <div className="glass rounded-xl p-3">
@@ -86,6 +108,7 @@ export default function ObservationsPage() {
   const router = useRouter();
   const { isDemo } = useDemo();
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [maladiesMap, setMaladiesMap] = useState<Record<string, MaladieObservation[]>>({});
   const [loading, setLoading] = useState(true);
   const [filterRang, setFilterRang] = useState("");
   const [filterMois, setFilterMois] = useState("");
@@ -94,16 +117,30 @@ export default function ObservationsPage() {
   useEffect(() => {
     if (isDemo) {
       setObservations(DEMO_OBSERVATIONS);
+      // Build maladies map from demo data
+      const map: Record<string, MaladieObservation[]> = {};
+      for (const m of DEMO_MALADIES) {
+        if (!map[m.observation_id]) map[m.observation_id] = [];
+        map[m.observation_id].push(m);
+      }
+      setMaladiesMap(map);
       setLoading(false);
       return;
     }
     async function load() {
-      const { data, error } = await supabase
-        .from("observations")
-        .select("*")
-        .order("date", { ascending: false })
-        .limit(100);
-      if (!error && data) setObservations(data as Observation[]);
+      const [obsRes, malRes] = await Promise.all([
+        supabase.from("observations").select("*").order("date", { ascending: false }).limit(100),
+        supabase.from("maladies_observations").select("*"),
+      ]);
+      if (!obsRes.error && obsRes.data) setObservations(obsRes.data as Observation[]);
+      if (!malRes.error && malRes.data) {
+        const map: Record<string, MaladieObservation[]> = {};
+        for (const m of malRes.data as MaladieObservation[]) {
+          if (!map[m.observation_id]) map[m.observation_id] = [];
+          map[m.observation_id].push(m);
+        }
+        setMaladiesMap(map);
+      }
       setLoading(false);
     }
     load();
@@ -180,7 +217,7 @@ export default function ObservationsPage() {
                   )}
                 </button>
 
-                {isExpanded && <ObservationDetail obs={obs} />}
+                {isExpanded && <ObservationDetail obs={obs} maladies={maladiesMap[obs.id] ?? []} />}
 
                 <div className="mt-2 flex justify-end gap-2">
                   <button
