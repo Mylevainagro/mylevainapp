@@ -8,7 +8,6 @@ import { NumberField } from "@/components/ui/NumberField";
 import { Toast } from "@/components/Toast";
 import {
   METEO_OPTIONS,
-  STADES_TRAITEMENT,
   TYPES_APPLICATION,
   VENT_OPTIONS,
 } from "@/lib/constants";
@@ -66,7 +65,6 @@ export default function NewTraitementPage() {
   const [vignoble, setVignoble] = useState("");
   const [parcelleId, setParcelleId] = useState("");
   const [date, setDate] = useState(today);
-  const [stade, setStade] = useState("");
   const [stadeBbchCode, setStadeBbchCode] = useState("");
   const [operateur, setOperateur] = useState("");
 
@@ -191,7 +189,7 @@ export default function NewTraitementPage() {
       notes: notes || null,
       campagne: new Date().getFullYear().toString(),
       protocole_id: (!modeLibre && protocoleId) ? protocoleId : null,
-      stade: stade || null,
+      stade: stadeBbchCode || null,
       zone_traitee_type: mode,
       type_application: typeApplication || null,
       prelevement_sol: prelevementSol,
@@ -253,21 +251,9 @@ export default function NewTraitementPage() {
             <label className="text-sm font-medium text-gray-700">Date</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
           </div>
+          {/* Stade BBCH */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Stade végétatif</label>
-            <div className="flex gap-2 flex-wrap">
-              {STADES_TRAITEMENT.map((s) => (
-                <button key={s} type="button" onClick={() => setStade(s)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${stade === s ? "bg-emerald-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-emerald-50"}`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Stade BBCH (pour recommandations) */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Stade BBCH (précis)</label>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Stade BBCH</label>
             <select value={stadeBbchCode} onChange={e => setStadeBbchCode(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm">
               <option value="">Sélectionner un stade BBCH…</option>
