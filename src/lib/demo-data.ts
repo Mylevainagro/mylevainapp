@@ -68,6 +68,7 @@ function genObservations(): Observation[] {
         mois: passage.mois,
         stade_bbch: STADES_PAR_MOIS[monthIdx],
         repetition: 1,
+        placette_id: null,
         vigueur,
         croissance: Math.min(5, vigueur) as 0|1|2|3|4|5,
         homogeneite: (isLevain ? 4 : 3) as 0|1|2|3|4|5,

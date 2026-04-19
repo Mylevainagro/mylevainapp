@@ -25,6 +25,7 @@ import { supabase } from "@/lib/supabase/client";
 interface VignobleItem { id: string; nom: string; }
 interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
 interface ModaliteItem { rang: number; modalite: string; description: string | null; surnageant_l: number; eau_l: number; volume_l: number; }
+interface PlacetteItem { id: string; parcelle_id: string; modalite_id: string | null; nom: string; nb_ceps: number; description_position: string | null; pieds_marques: string | null; }
 
 // Structure maladie v2 (Wilfried — 20 feuilles)
 interface MaladieEntry {
@@ -45,20 +46,23 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   // Données dynamiques
   const [vignoblesList, setVignoblesList] = useState<VignobleItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
+  const [placettesList, setPlacettesList] = useState<PlacetteItem[]>([]);
   const [modalitesList, setModalitesList] = useState<ModaliteItem[]>(
     MODALITES_REF.map((m) => ({ ...m }))
   );
 
   useEffect(() => {
     async function load() {
-      const [v, p, m] = await Promise.all([
+      const [v, p, m, pl] = await Promise.all([
         supabase.from("vignobles").select("id, nom").order("nom"),
         supabase.from("parcelles").select("id, vignoble_id, nom").order("nom"),
         supabase.from("referentiel_modalites").select("*").eq("actif", true).order("rang"),
+        supabase.from("placettes").select("*").eq("actif", true).order("nom"),
       ]);
       if (v.data) setVignoblesList(v.data);
       if (p.data) setParcellesList(p.data);
       if (m.data && m.data.length > 0) setModalitesList(m.data);
+      if (pl.data) setPlacettesList(pl.data);
     }
     load();
   }, []);
@@ -71,6 +75,7 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   const [vignoble, setVignoble] = useState("");
   const [parcelleId, setParcelleId] = useState(initialData?.parcelle_id ?? "");
   const [rang, setRang] = useState<number>(initialData?.rang ?? 0);
+  const [placetteId, setPlacetteId] = useState(initialData?.placette_id ?? "");
   const [date, setDate] = useState(initialData?.date ?? today);
   const [heure, setHeure] = useState(initialData?.heure ?? now);
   const [stadeBbch, setStadeBbch] = useState(initialData?.stade_bbch ?? "");
@@ -128,6 +133,9 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
     return v && p.vignoble_id === v.id;
   }) : [];
 
+  // Placettes filtrées par parcelle (et optionnellement par modalité)
+  const placettes = parcelleId ? placettesList.filter(pl => pl.parcelle_id === parcelleId) : [];
+
   const rangs = modalitesList.map(m => m.rang);
 
   // ---- Maladies helpers ----
@@ -184,6 +192,7 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
       mois: new Date(date).toLocaleString("fr-FR", { month: "long" }),
       stade_bbch: stadeBbch || null,
       repetition,
+      placette_id: placetteId || null,
       vigueur,
       croissance,
       homogeneite,
@@ -240,10 +249,10 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
 
       {/* ===== 1. Identification ===== */}
       <Section title="Identification" icon="📍" defaultOpen={true}>
-        <SelectField label="Site" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); }} options={vignoblesList.map(v => v.nom)} />
+        <SelectField label="Site" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); setPlacetteId(""); }} options={vignoblesList.map(v => v.nom)} />
         {parcelles.length > 0 && (
           <div data-field="parcelle_id">
-            <SelectField label="Parcelle" value={parcelleId} onChange={(v) => { setParcelleId(v); clearError("parcelle_id"); }} options={parcelles.map(p => ({ value: p.id, label: p.nom }))} />
+            <SelectField label="Parcelle" value={parcelleId} onChange={(v) => { setParcelleId(v); setPlacetteId(""); clearError("parcelle_id"); }} options={parcelles.map(p => ({ value: p.id, label: p.nom }))} />
             <ValidationMessage message={errorFor("parcelle_id")} />
           </div>
         )}
@@ -257,6 +266,32 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
             {modaliteRef && <span className="text-gray-500 ml-2">— {modaliteRef.description}</span>}
           </div>
         )}
+
+        {/* Placette */}
+        {placettes.length > 0 ? (
+          <SelectField
+            label="Placette"
+            value={placetteId}
+            onChange={setPlacetteId}
+            options={placettes.map(pl => ({ value: pl.id, label: `${pl.nom} (${pl.nb_ceps} ceps)` }))}
+            placeholder="Sélectionner une placette"
+          />
+        ) : parcelleId ? (
+          <div className="bg-amber-50 rounded-xl px-3 py-2 text-xs text-amber-700">
+            ℹ️ Aucune placette définie pour cette parcelle. Créez-en dans Admin.
+          </div>
+        ) : null}
+        {placetteId && (() => {
+          const pl = placettesList.find(p => p.id === placetteId);
+          return pl ? (
+            <div className="bg-blue-50 rounded-xl px-3 py-2 text-xs text-blue-700 space-y-0.5">
+              <div><strong>{pl.nom}</strong> — {pl.nb_ceps} ceps</div>
+              {pl.description_position && <div>📍 {pl.description_position}</div>}
+              {pl.pieds_marques && <div>🏷️ Pieds : {pl.pieds_marques}</div>}
+            </div>
+          ) : null;
+        })()}
+
         <NumberField label="Répétition (placette)" value={repetition} onChange={setRepetition} min={1} max={10} />
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1" data-field="date">

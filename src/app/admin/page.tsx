@@ -22,6 +22,7 @@ interface ZoneCultureItem { id: string; site_id: string; type_culture_id: string
 interface ProtocoleItem { id: string; code: string; label: string; type: string; description: string | null; actif: boolean; ordre: number; }
 interface ModaliteLevainItem { id: string; code: string; label: string; dilution: string | null; description: string | null; actif: boolean; ordre: number; }
 interface ProduitItem { id: string; code: string; label: string; type: string; origine: string | null; description: string | null; actif: boolean; ordre: number; }
+interface PlacetteItem { id: string; parcelle_id: string; modalite_id: string | null; nom: string; nb_ceps: number; description_position: string | null; pieds_marques: string | null; actif: boolean; }
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export default function AdminPage() {
   const [protocolesList, setProtocolesList] = useState<ProtocoleItem[]>([]);
   const [modalitesLevain, setModalitesLevain] = useState<ModaliteLevainItem[]>([]);
   const [produitsList, setProduitsList] = useState<ProduitItem[]>([]);
+  const [placettesList, setPlacettesList] = useState<PlacetteItem[]>([]);
   const [toast, setToast] = useState({ message: "", type: "success" as "success" | "error", visible: false });
   const hideToast = useCallback(() => setToast(t => ({ ...t, visible: false })), []);
 
@@ -95,6 +97,10 @@ export default function AdminPage() {
       if (proto.data) setProtocolesList(proto.data);
       if (modLev.data) setModalitesLevain(modLev.data);
       if (prod.data) setProduitsList(prod.data);
+
+      // Load placettes
+      const { data: plData } = await supabase.from("placettes").select("*").order("nom");
+      if (plData) setPlacettesList(plData);
 
       setLoading(false);
     }
@@ -371,6 +377,29 @@ export default function AdminPage() {
     showToast("Produit supprimé");
   }
 
+  // ---- CRUD Placettes ----
+  async function savePlacette() {
+    setSaving(true);
+    const d = modal?.data;
+    if (d.id) {
+      await supabase.from("placettes").update({ nom: d.nom, parcelle_id: d.parcelle_id, modalite_id: d.modalite_id || null, nb_ceps: d.nb_ceps || 7, description_position: d.description_position || null, pieds_marques: d.pieds_marques || null, actif: d.actif ?? true }).eq("id", d.id);
+      showToast("Placette modifiée");
+    } else {
+      const { error } = await supabase.from("placettes").insert({ nom: d.nom, parcelle_id: d.parcelle_id, modalite_id: d.modalite_id || null, nb_ceps: d.nb_ceps || 7, description_position: d.description_position || null, pieds_marques: d.pieds_marques || null, actif: true });
+      if (error) showToast(error.message, "error"); else showToast("Placette ajoutée");
+    }
+    setSaving(false); setModal(null);
+    const { data } = await supabase.from("placettes").select("*").order("nom");
+    if (data) setPlacettesList(data);
+  }
+
+  async function deletePlacette(id: string) {
+    if (!confirm("Supprimer cette placette ?")) return;
+    await supabase.from("placettes").delete().eq("id", id);
+    setPlacettesList(p => p.filter(x => x.id !== id));
+    showToast("Placette supprimée");
+  }
+
   // ---- RENDER ----
   if (loading) return <div className="pt-4"><ListSkeleton count={4} /></div>;
 
@@ -456,6 +485,28 @@ export default function AdminPage() {
           </div>
         ))}
         {parcelles.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune parcelle</p>}
+      </AdminCard>
+
+      {/* ---- PLACETTES ---- */}
+      <AdminCard title="📌 Placettes (unités d'observation)" onAdd={() => setModal({ type: "placette_new", data: { nom: "", parcelle_id: parcelles[0]?.id || "", modalite_id: "", nb_ceps: 7, description_position: "", pieds_marques: "" } })}>
+        {placettesList.map(pl => (
+          <div key={pl.id} className="flex items-center justify-between px-4 py-3">
+            <div>
+              <div className="font-medium text-sm">{pl.nom}</div>
+              <div className="text-xs text-gray-500">
+                {parcelles.find(p => p.id === pl.parcelle_id)?.nom || "?"} · {pl.nb_ceps} ceps
+                {pl.modalite_id && ` · ${pl.modalite_id}`}
+                {pl.description_position && ` · ${pl.description_position}`}
+              </div>
+              {pl.pieds_marques && <div className="text-[10px] text-gray-400">🏷️ {pl.pieds_marques}</div>}
+            </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setModal({ type: "placette", data: { ...pl } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg active:scale-95">✏️</button>
+              <button onClick={() => deletePlacette(pl.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg active:scale-95">🗑</button>
+            </div>
+          </div>
+        ))}
+        {placettesList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune placette — créez-en pour vos observations</p>}
       </AdminCard>
 
       {/* ---- MODALITÉS ---- */}
@@ -766,6 +817,25 @@ export default function AdminPage() {
         <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
         <label className="text-sm font-medium">Ordre</label>
         <input type="number" value={modal?.data?.ordre || 1} onChange={e => updateModal("ordre", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+      </EditModal>
+
+      {/* Modal Placette */}
+      <EditModal open={modal?.type === "placette" || modal?.type === "placette_new"} title={modal?.data?.id ? "Modifier placette" : "Nouvelle placette"} onClose={() => setModal(null)} onSave={savePlacette} saving={saving}>
+        <label className="text-sm font-medium">Nom *</label>
+        <input value={modal?.data?.nom || ""} onChange={e => updateModal("nom", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Placette 1" />
+        <label className="text-sm font-medium">Parcelle *</label>
+        <select value={modal?.data?.parcelle_id || ""} onChange={e => updateModal("parcelle_id", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="">Sélectionner...</option>
+          {parcelles.map(p => <option key={p.id} value={p.id}>{p.nom} ({vignobles.find(v => v.id === p.vignoble_id)?.nom})</option>)}
+        </select>
+        <label className="text-sm font-medium">Modalité (code)</label>
+        <input value={modal?.data?.modalite_id || ""} onChange={e => updateModal("modalite_id", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: M0, M1, M2" />
+        <label className="text-sm font-medium">Nombre de ceps</label>
+        <input type="number" value={modal?.data?.nb_ceps || 7} onChange={e => updateModal("nb_ceps", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+        <label className="text-sm font-medium">Position dans le rang</label>
+        <input value={modal?.data?.description_position || ""} onChange={e => updateModal("description_position", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: début du rang 3, milieu rang 5" />
+        <label className="text-sm font-medium">Pieds marqués</label>
+        <input value={modal?.data?.pieds_marques || ""} onChange={e => updateModal("pieds_marques", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: pieds 10 à 16" />
       </EditModal>
     </div>
   );

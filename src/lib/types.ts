@@ -29,6 +29,20 @@ export type StadeTraitement = "A" | "B" | "C" | "D" | "E" | "F";
 export type ZoneTraiteeType = "rang" | "surface";
 export type TypeApplication = "pulve_dos" | "tracteur" | "panneaux_recuperateurs";
 
+// ---- Placette (unité expérimentale d'observation) ----
+
+export interface Placette {
+  id: string;
+  parcelle_id: string;
+  modalite_id: string | null; // code modalité (M0, M1, M2…)
+  nom: string;
+  nb_ceps: number;
+  description_position: string | null;
+  pieds_marques: string | null;
+  actif: boolean;
+  created_at: string;
+}
+
 // ---- Entités principales ----
 
 export interface Vignoble {
@@ -62,6 +76,7 @@ export interface Observation {
   // Nouveaux champs v2
   stade_bbch: string | null;
   repetition: number | null; // placette 1, 2, 3…
+  placette_id: string | null; // lien vers table placettes
   rang: number;
 
   // État plante (0-5) — supprimé: epaisseur_feuilles

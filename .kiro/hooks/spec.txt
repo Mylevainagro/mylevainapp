@@ -1,429 +1,297 @@
-Gmail	Davy Ofwood <davyduboy@gmail.com>
-(aucun objet)
-Davy Ofwood <davyduboy@gmail.com>	19 avril 2026 à 18:19
-À : Davy Ofwood <davyduboy@gmail.com>
-Parfait 👏
-👉 Là on passe dans le concret terrain + structuration produit, exactement ce qu’il faut faire avant lundi.
-
-Je vais te faire un document clair, logique, terrain + dev-ready, que tu peux :
-
-✔️ utiliser lundi sur le terrain
-✔️ copier-coller dans Kiro
-✔️ envoyer à ton frère
-✔️ transformer en specs produit
 
 
-🧠 🎯 OBJECTIF
+CLARIFICATION MÉTIER – NOTION DE PLACETTE ET LOGIQUE D’OBSERVATION
 
-👉 Avoir une app qui permet :
+OBJECTIF
 
-Saisie simple terrain
-Données propres pour IA
-Logique agronomique claire (Wilfried)
-Zéro confusion protocole / modalité / produit
+Corriger l’interprétation actuelle de l’app concernant les observations terrain.
 
+Le point clé à comprendre est le suivant :
 
-🚜 🧩 SCÉNARIO TERRAIN COMPLET (À SUIVRE LUNDI)
+👉 on n’observe pas forcément un rang entier
+👉 on observe souvent une placette
+👉 une placette est une petite zone fixe et répétable d’observation dans une parcelle expérimentale
 
 
 
-🔵 1. AVANT D’ARRIVER SUR LE TERRAIN (PRÉPARATION)
+1. DÉFINITION DE LA PLACETTE
 
-👉 À faire dans l’app (ADMIN)
+Définition simple
 
-1.1 Créer un
+Une placette est un sous-ensemble précis de la parcelle, utilisé pour faire des observations répétées dans le temps.
 
-SITE
+Dans notre cas, en vigne, une placette peut correspondre par exemple à :
 
-👉 (ancien “vignoble” → remplacé par “Site”)
-
-Champs :
-
-Nom client / Château
-Nom parcelle
-GPS
-Cépage / culture
-Densité plantation
-Type de sol
-Pratique (bio, conventionnel…)
-Description rangs (ex : 7 rangs Merlot)
+7 ceps
+10 ceps
+ou un petit groupe fixe de pieds
+👉 Ce groupe doit être toujours le même entre T0, T1, T2, etc.
 
 
-1.2 Créer un
 
-PROTOCOLE
+Pourquoi une placette ?
 
-👉 Protocole = stratégie globale
+On utilise une placette pour :
 
-Ex :
+éviter d’observer toute la parcelle de manière floue
+standardiser les observations
+comparer toujours la même zone
+rendre les données scientifiquement comparables
+permettre une répétition expérimentale
 
-P1S (séquentiel)
-P2MT (mélange cuve)
 
+2. DIFFÉRENCE ENTRE RANG, MODALITÉ ET PLACETTE
 
-1.3 Définir les
+Rang
 
-MODALITÉS
+Le rang = une ligne entière de vigne.
 
-👉 Modalité = variation par rang / placette
+Modalité
 
-Ex :
+La modalité = le traitement ou la condition appliquée.
+
+Exemples :
 
 M0 = témoin
 M1 = levain 1/4
 M2 = levain 1/2
+Placette
 
-
-1.4 Associer protocole au site
-
-👉 IMPORTANT :
-
-✔️ 1 parcelle = 1 protocole
-✔️ MAIS flexible (Wilfried)
+La placette = la petite zone observée dans une modalité.
 
 
 
-🟢 2. ARRIVÉE SUR LE TERRAIN
+Exemple concret
+
+Parcelle : Merlot 3
+Protocole : P1
+Modalités :
+
+M0 = témoin
+M1 = levain 1/4
+M2 = levain 1/2
+Pour la modalité M1, on peut avoir :
+
+Placette 1 = 7 ceps situés au début du rang
+Placette 2 = 7 ceps au milieu du rang
+Placette 3 = 7 ceps à la fin du rang
+👉 On observe ces mêmes placettes à chaque passage.
 
 
 
-🔹 CAS 1 — TU FAIS UN TRAITEMENT
+3. CONSÉQUENCE POUR L’APP
 
+L’observation ne doit pas être centrée sur le rang uniquement
 
+Aujourd’hui, si l’app raisonne en “rang”, ce n’est pas assez précis pour la logique expérimentale demandée.
 
-🧪 SAISIE : NOUVEAU TRAITEMENT
-
-
-
-🔸 Étape 1 — Identification
-
-Site
-Parcelle
-Protocole
-Date
-Stade (A, B, C, D… ⚠️ PAS BBCH ici)
-Opérateur
-
-
-🔸 Étape 2 — Zone traitée
-
-👉 selon cas :
-
-Rang (R1, R2…)
-OU
-Surface (m² / ha)
-
-
-🔸 Étape 3 — Modalité
-
-👉 sélection obligatoire :
-
-M0 / M1 / M2…
-
-
-🔸 Étape 4 — Produits (automatiques depuis protocole)
-
-👉 MAIS tu renseignes :
-
-Dose réelle
-Volume bouillie
-pH eau
-pH bouillie
-Origine eau
-
-
-🔸 Étape 5 — Conditions météo (IMPORTANT)
-
-Heure
-Température
-Humidité
-Vent
-Couvert
-
-
-🔸 Étape 6 — Type application
-
-Pulvé à dos
-Tracteur
-Panneaux récupérateurs
-
-
-🔸 Étape 7 — Cas spécial
-
-👉 cocher :
-
-prélèvement sol (oui/non)
-
-
-🔸 Étape 8 — Notes
-
-observations terrain
-anomalies
-
-
-🟢 3. CAS 2 — TU FAIS UNE OBSERVATION
-
-
-
-👁️ SAISIE : NOUVELLE OBSERVATION
-
-
-
-🔸 Étape 1 — Identification AUTO
+Il faut pouvoir saisir :
 
 Site
 Parcelle
-Modalité (⚠️ plus de rang ici)
-Répétition (placette 1, 2, 3…)
-
-
-🔸 Étape 2 — État de la plante
-
-👉 structure corrigée :
-
-Croissance
-
-Stade BBCH (avec aide visuelle)
-
-
-Vigueur
-
-score 0–5
-
-
-Homogénéité
-
-score 0–5
-
-
-Couleur feuilles
-
-score 0–5
-
-
-Turgescence
-
-score 0–5
-
-
-❌ supprimer :
-
-épaisseur feuilles
-
-
-🔸 Étape 3 — Symptômes négatifs
-
-brûlures
-nécroses
-déformations
-➕ ajouter :
-
-escargots (oui/non)
-acariens (oui/non)
-
-
-🔸 Étape 4 — Maladies (STRUCTURE WILFRIED)
-
-👉 mesures sur 20 feuilles
-
-
-
-Type
-
-mildiou
-oïdium
-botrytis
-black rot
-
-
-Zone
-
-feuille
-grappe
-
-
-Fréquence
-
-👉 nb feuilles atteintes → % auto
-
-
-
-Intensité
-
-👉 surface atteinte → % auto
-
-
-
-❌ supprimer :
-
-progression
-pression mildiou
-
-
-🔸 Étape 5 — Rendement (ULTRA IMPORTANT)
-
-👉 sur 10 ceps marqués
-
-nb grappes
-poids grappes
-poids 100 baies
-rendement estimé
-rendement réel
-
-
-🔸 Étape 6 — Photos
-
-OK
-
-
-🔸 Étape 7 — Commentaires
-
-OK
-
-
-🟡 4. CE QUI DOIT DISPARAÎTRE (IMPORTANT)
-
-Dans observation :
-
-❌ météo
-❌ traitement appliqué
-❌ analyse labo
-❌ scores calculés
-
-
-
-🔴 5. CE QUI DOIT ÊTRE DANS D’AUTRES ONGLETS
-
-
-
-📊 ANALYSES LABO
-
-👉 séparé
-
-👉 affiché :
-
-dans fiche site
-dans rapports
-
-
-🌦️ MÉTÉO
-
-👉 via API (plus tard)
-
-
-
-📅 REGISTRE VIGNERON
-
-👉 import ou pièce jointe
-
-
-
-🧠 6. STRUCTURE MÉTIER À RESPECTER
-
-Élément
-
-Rôle
-
-Site
-
-lieu
-
-Parcelle
-
-zone
-
-Protocole
-
-stratégie
-
 Modalité
+Placette
+Répétition éventuelle
 
-variation
 
-Traitement
+Nouveau principe
 
-action
+Pour une observation :
+
+on observe une placette rattachée à une modalité
+
+Pour un traitement :
+
+on peut traiter une modalité sur un rang entier ou sur une zone définie
+
+
+
+4. CE QUE DOIT PERMETTRE L’APP
+
+Dans la page “Nouvelle observation”
+
+Remplacer la logique actuelle basée sur “Rang” par une logique plus précise :
+
+Identification
+
+Site
+Parcelle
+Modalité
+Placette
+Date
+Heure
+
+
+Champ Placette
+
+Ajouter un champ dédié :
+
+placette_id
+ou
+placette_nom
+ou
+numero_placette
+
+
+Description possible d’une placette
+
+Une placette peut contenir :
+
+numéro de placette
+nombre de ceps
+position dans le rang
+numéros des pieds marqués
+commentaire libre
+
+
+5. EXEMPLE DE SAISIE ATTENDUE
+
+Exemple 1
+
+Site : Château de Piote
+Parcelle : Merlot 3
+Modalité : M1
+Placette : Placette 2
+Observation faite sur : 7 ceps marqués
+
+
+Exemple 2
+
+Site : Pape Clément
+Parcelle : Cabernet 1
+Modalité : M0
+Placette : Placette 1
+Observation faite sur : pieds 10 à 16
+
+
+6. POUR LE RENDEMENT
+
+La notion de placette est aussi essentielle pour les mesures de rendement.
+
+Les champs rendement doivent être reliés à la placette observée, pas seulement à la parcelle générale.
+
+Exemples :
+
+nombre de grappes sur les ceps de la placette
+poids des grappes de la placette
+poids de 100 baies de la placette
+rendement estimé à partir de la placette
+
+
+7. POURQUOI C’EST IMPORTANT SCIENTIFIQUEMENT
+
+Si on ne distingue pas la placette :
+
+on mélange des zones différentes
+on perd la répétabilité
+on fragilise la comparaison entre dates
+on rend les données moins exploitables pour la science et pour l’IA
+Si on intègre bien la placette :
+
+on observe toujours la même unité expérimentale
+on peut comparer T0 / T6 / T12
+on renforce fortement la qualité des données
+
+
+8. PROPOSITION DE MODIFICATION DANS L’APP
+
+À faire
 
 Observation
 
-mesure
+Ajouter dans l’identification :
+
+site_id
+parcelle_id
+modalite_id
+placette_id
+Admin / structure
+
+Créer une notion de placette liée à une parcelle et/ou une modalité
 
 
 
-🔥 7. IDENTIFIANT UNIQUE
+Exemple de structure possible
 
-CLIENT-PARCELLE-PROTOCOLE-MODALITE
+table
 
-👉 supprimer complexité inutile
+placettes
+
+id
+parcelle_id
+modalite_id
+nom
+nb_ceps
+description_position
+pieds_marques
+actif
 
 
+dans
 
-🧠 8. LOGIQUE UX (TRÈS IMPORTANT)
+observations
 
-👉 1 action = 1 écran
+ajouter :
+
+placette_id
 
 
-
-écran 1
-
-Choisir :
+9. RÈGLE MÉTIER À RESPECTER
 
 Traitement
+
+Le traitement peut concerner :
+
+une parcelle entière
+un rang
+une modalité
 Observation
 
+L’observation doit concerner :
 
-écran 2
-
-Saisie simple
-
-
-
-👉 PAS de mélange
-
+une modalité
+une placette précise
+👉 Donc :
+traitement ≠ observation
+rang ≠ placette
+modalité ≠ placette
 
 
-🚀 9. CE QUE TU PEUX DONNER À TON FRÈRE
 
-Tu peux lui envoyer ç
+10. RÉSUMÉ ULTRA CLAIR
 
-=“98231”}
-Voici la logique terrain finale validée avec Wilfried.
+Une placette est :
 
-Objectifs :
+une petite zone fixe d’observation
+représentative d’une modalité
+suivie dans le temps
+indispensable pour les mesures fiables
+Dans l’app, la saisie d’observation doit donc se faire sur :
 
-simplifier la saisie mobile
-séparer protocole / modalité / produit
-améliorer qualité data pour IA
-À faire :
+Site
+Parcelle
+Modalité
+Placette
+et non pas uniquement sur :
 
-remplacer “Vignoble” par “Site”
-créer onglet “Protocole”
-créer onglet “Site”
-supprimer météo / traitement / analyse labo dans observation
-structurer maladies (fréquence + intensité)
-ajouter rendement (10 ceps)
-ajouter répétitions (placettes)
-supprimer scores calculés en saisie
-afficher protocole lié à la parcelle
-UX :
+Site
+Parcelle
+Rang
 
-1 action = 1 écran
-traitement et observation séparés
-modalité choisie une seule fois
-On teste ça terra
 
-lundi.
+11. CONSIGNE POUR LA REFONTE
+
+Merci d’adapter la logique de l’app pour intégrer explicitement la notion de placette dans les observations, dans la structure des données et dans l’admin.
+
+Objectif :
+
+cohérence scientifique
+observations répétables
+meilleure qualité des données
+meilleure base pour la future IA
+END
 :::
 
-
-
-💥 MON AVIS
-
-👉 Là tu viens de faire un énorme saut :
-
-produit utilisable ✔️
-logique agronomique ✔️
-base IA propre ✔️
-
+Si tu veux, je peux maintenant te refaire aussi le bloc complet “observation + traitement + protocole + placette”, en une seule note technique cohérente, pour que tu n’aies qu’un seul copier-coller global pour Kiro.
 
 
