@@ -302,6 +302,75 @@ export default function AdminPage() {
     if (data) setEspeces(data);
   }
 
+  // ---- CRUD Protocoles ----
+  async function saveProtocole() {
+    setSaving(true);
+    const d = modal?.data;
+    if (d.id) {
+      await supabase.from("protocoles").update({ code: d.code, label: d.label, type: d.type, description: d.description || null, actif: d.actif ?? true, ordre: d.ordre }).eq("id", d.id);
+      showToast("Protocole modifié");
+    } else {
+      const { error } = await supabase.from("protocoles").insert({ code: d.code, label: d.label, type: d.type || 'simple', description: d.description || null, actif: true, ordre: d.ordre || 1 });
+      if (error) showToast(error.message, "error"); else showToast("Protocole ajouté");
+    }
+    setSaving(false); setModal(null);
+    const { data } = await supabase.from("protocoles").select("*").order("ordre");
+    if (data) setProtocolesList(data);
+  }
+
+  async function deleteProtocole(id: string) {
+    if (!confirm("Supprimer ce protocole ?")) return;
+    await supabase.from("protocoles").delete().eq("id", id);
+    setProtocolesList(p => p.filter(x => x.id !== id));
+    showToast("Protocole supprimé");
+  }
+
+  // ---- CRUD Modalités levain ----
+  async function saveModaliteLevain() {
+    setSaving(true);
+    const d = modal?.data;
+    if (d.id) {
+      await supabase.from("modalites_levain").update({ code: d.code, label: d.label, dilution: d.dilution || null, description: d.description || null, actif: d.actif ?? true, ordre: d.ordre }).eq("id", d.id);
+      showToast("Modalité levain modifiée");
+    } else {
+      const { error } = await supabase.from("modalites_levain").insert({ code: d.code, label: d.label, dilution: d.dilution || null, description: d.description || null, actif: true, ordre: d.ordre || 1 });
+      if (error) showToast(error.message, "error"); else showToast("Modalité levain ajoutée");
+    }
+    setSaving(false); setModal(null);
+    const { data } = await supabase.from("modalites_levain").select("*").order("ordre");
+    if (data) setModalitesLevain(data);
+  }
+
+  async function deleteModaliteLevain(id: string) {
+    if (!confirm("Supprimer cette modalité levain ?")) return;
+    await supabase.from("modalites_levain").delete().eq("id", id);
+    setModalitesLevain(m => m.filter(x => x.id !== id));
+    showToast("Modalité levain supprimée");
+  }
+
+  // ---- CRUD Produits ----
+  async function saveProduit() {
+    setSaving(true);
+    const d = modal?.data;
+    if (d.id) {
+      await supabase.from("produits").update({ code: d.code, label: d.label, type: d.type, origine: d.origine || null, description: d.description || null, actif: d.actif ?? true, ordre: d.ordre }).eq("id", d.id);
+      showToast("Produit modifié");
+    } else {
+      const { error } = await supabase.from("produits").insert({ code: d.code, label: d.label, type: d.type || 'levain', origine: d.origine || null, description: d.description || null, actif: true, ordre: d.ordre || 1 });
+      if (error) showToast(error.message, "error"); else showToast("Produit ajouté");
+    }
+    setSaving(false); setModal(null);
+    const { data } = await supabase.from("produits").select("*").order("ordre");
+    if (data) setProduitsList(data);
+  }
+
+  async function deleteProduit(id: string) {
+    if (!confirm("Supprimer ce produit ?")) return;
+    await supabase.from("produits").delete().eq("id", id);
+    setProduitsList(p => p.filter(x => x.id !== id));
+    showToast("Produit supprimé");
+  }
+
   // ---- RENDER ----
   if (loading) return <div className="pt-4"><ListSkeleton count={4} /></div>;
 
@@ -353,8 +422,8 @@ export default function AdminPage() {
         {appUsers.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun utilisateur</p>}
       </AdminCard>
 
-      {/* ---- VIGNOBLES ---- */}
-      <AdminCard title="🏡 Vignobles" onAdd={() => setModal({ type: "vignoble", data: { nom: "", localisation: "", appellation: "", type_sol: "" } })}>
+      {/* ---- VIGNOBLES (legacy → Sites) ---- */}
+      <AdminCard title="🏡 Sites (Vignobles)" onAdd={() => setModal({ type: "vignoble", data: { nom: "", localisation: "", appellation: "", type_sol: "" } })}>
         {vignobles.map(v => (
           <div key={v.id} className="flex items-center justify-between px-4 py-3">
             <div>
@@ -462,7 +531,7 @@ export default function AdminPage() {
       <h2 className="text-lg font-bold gradient-text mt-6">🧪 Protocole & Produits</h2>
 
       {/* ---- PROTOCOLES ---- */}
-      <AdminCard title="📋 Protocoles (13)">
+      <AdminCard title="📋 Protocoles" onAdd={() => setModal({ type: "protocole_new", data: { code: "", label: "", type: "simple", description: "", ordre: protocolesList.length + 1 } })}>
         {protocolesList.map(p => (
           <div key={p.id} className={`flex items-center justify-between px-4 py-3 ${!p.actif ? "opacity-40" : ""}`}>
             <div className="flex items-center gap-3">
@@ -472,13 +541,17 @@ export default function AdminPage() {
                 <div className="text-xs text-gray-500">{p.type} — {p.description || "—"}</div>
               </div>
             </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setModal({ type: "protocole", data: { ...p } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg active:scale-95">✏️</button>
+              <button onClick={() => deleteProtocole(p.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg active:scale-95">🗑</button>
+            </div>
           </div>
         ))}
-        {protocolesList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun protocole (exécuter migration 013+014)</p>}
+        {protocolesList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun protocole</p>}
       </AdminCard>
 
       {/* ---- MODALITÉS LEVAIN ---- */}
-      <AdminCard title="🧪 Modalités levain (M0/M1/M2)">
+      <AdminCard title="🧪 Modalités levain (M0/M1/M2)" onAdd={() => setModal({ type: "modalite_levain_new", data: { code: "", label: "", dilution: "", description: "", ordre: modalitesLevain.length + 1 } })}>
         {modalitesLevain.map(m => (
           <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${!m.actif ? "opacity-40" : ""}`}>
             <div className="flex items-center gap-3">
@@ -488,13 +561,17 @@ export default function AdminPage() {
                 <div className="text-xs text-gray-500">Dilution : {m.dilution || "—"} — {m.description || ""}</div>
               </div>
             </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setModal({ type: "modalite_levain", data: { ...m } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg active:scale-95">✏️</button>
+              <button onClick={() => deleteModaliteLevain(m.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg active:scale-95">🗑</button>
+            </div>
           </div>
         ))}
-        {modalitesLevain.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune modalité (exécuter migration 014)</p>}
+        {modalitesLevain.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune modalité</p>}
       </AdminCard>
 
       {/* ---- PRODUITS ---- */}
-      <AdminCard title="🌿 Produits MyLevain">
+      <AdminCard title="🌿 Produits MyLevain" onAdd={() => setModal({ type: "produit_new", data: { code: "", label: "", type: "levain", origine: "", description: "", ordre: produitsList.length + 1 } })}>
         {produitsList.map(p => (
           <div key={p.id} className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
@@ -504,9 +581,13 @@ export default function AdminPage() {
                 <div className="text-xs text-gray-500">{p.type} — {p.origine || "—"}</div>
               </div>
             </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setModal({ type: "produit", data: { ...p } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg active:scale-95">✏️</button>
+              <button onClick={() => deleteProduit(p.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg active:scale-95">🗑</button>
+            </div>
           </div>
         ))}
-        {produitsList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun produit (exécuter migration 013)</p>}
+        {produitsList.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun produit</p>}
       </AdminCard>
 
       {/* ---- CONFIG / PARAMÈTRES ---- */}
@@ -633,6 +714,58 @@ export default function AdminPage() {
           <option value="">Sélectionner...</option>
           {typesCulture.map(tc => <option key={tc.id} value={tc.id}>{tc.nom}</option>)}
         </select>
+      </EditModal>
+
+      {/* Modal Protocole */}
+      <EditModal open={modal?.type === "protocole" || modal?.type === "protocole_new"} title={modal?.data?.id ? "Modifier protocole" : "Nouveau protocole"} onClose={() => setModal(null)} onSave={saveProtocole} saving={saving}>
+        <label className="text-sm font-medium">Code *</label>
+        <input value={modal?.data?.code || ""} onChange={e => updateModal("code", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: P1S" />
+        <label className="text-sm font-medium">Label *</label>
+        <input value={modal?.data?.label || ""} onChange={e => updateModal("label", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Séquentiel levain" />
+        <label className="text-sm font-medium">Type</label>
+        <select value={modal?.data?.type || "simple"} onChange={e => updateModal("type", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="simple">Simple</option>
+          <option value="sequentiel">Séquentiel</option>
+          <option value="meme_temps">Même temps</option>
+        </select>
+        <label className="text-sm font-medium">Description</label>
+        <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+        <label className="text-sm font-medium">Ordre</label>
+        <input type="number" value={modal?.data?.ordre || 1} onChange={e => updateModal("ordre", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+      </EditModal>
+
+      {/* Modal Modalité levain */}
+      <EditModal open={modal?.type === "modalite_levain" || modal?.type === "modalite_levain_new"} title={modal?.data?.id ? "Modifier modalité levain" : "Nouvelle modalité levain"} onClose={() => setModal(null)} onSave={saveModaliteLevain} saving={saving}>
+        <label className="text-sm font-medium">Code *</label>
+        <input value={modal?.data?.code || ""} onChange={e => updateModal("code", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: M0, M1, M2" />
+        <label className="text-sm font-medium">Label *</label>
+        <input value={modal?.data?.label || ""} onChange={e => updateModal("label", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Témoin, Levain 1/4" />
+        <label className="text-sm font-medium">Dilution</label>
+        <input value={modal?.data?.dilution || ""} onChange={e => updateModal("dilution", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: 1/4, 1/2" />
+        <label className="text-sm font-medium">Description</label>
+        <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+        <label className="text-sm font-medium">Ordre</label>
+        <input type="number" value={modal?.data?.ordre || 1} onChange={e => updateModal("ordre", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+      </EditModal>
+
+      {/* Modal Produit */}
+      <EditModal open={modal?.type === "produit" || modal?.type === "produit_new"} title={modal?.data?.id ? "Modifier produit" : "Nouveau produit"} onClose={() => setModal(null)} onSave={saveProduit} saving={saving}>
+        <label className="text-sm font-medium">Code *</label>
+        <input value={modal?.data?.code || ""} onChange={e => updateModal("code", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: LEV01" />
+        <label className="text-sm font-medium">Label *</label>
+        <input value={modal?.data?.label || ""} onChange={e => updateModal("label", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Surnageant de levain" />
+        <label className="text-sm font-medium">Type</label>
+        <select value={modal?.data?.type || "levain"} onChange={e => updateModal("type", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="levain">Levain</option>
+          <option value="phyto">Phyto</option>
+          <option value="autre">Autre</option>
+        </select>
+        <label className="text-sm font-medium">Origine</label>
+        <input value={modal?.data?.origine || ""} onChange={e => updateModal("origine", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Production interne" />
+        <label className="text-sm font-medium">Description</label>
+        <input value={modal?.data?.description || ""} onChange={e => updateModal("description", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+        <label className="text-sm font-medium">Ordre</label>
+        <input type="number" value={modal?.data?.ordre || 1} onChange={e => updateModal("ordre", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
       </EditModal>
     </div>
   );
