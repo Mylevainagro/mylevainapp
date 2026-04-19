@@ -13,11 +13,13 @@ import {
   VENT_OPTIONS,
 } from "@/lib/constants";
 import { supabase } from "@/lib/supabase/client";
+import { RecommandationBbch } from "@/components/traitements/RecommandationBbch";
 
 interface VignobleItem { id: string; nom: string; }
 interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
 interface ProtocoleOption { id: string; code: string; label: string; }
 interface ModaliteLevainOption { id: string; code: string; label: string; }
+interface BbchOption { id: string; code: string; label: string; }
 
 interface RangEntry {
   rang: string;
@@ -35,6 +37,7 @@ export default function NewTraitementPage() {
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
   const [protocoleOptions, setProtocoleOptions] = useState<ProtocoleOption[]>([]);
   const [modaliteOptions, setModaliteOptions] = useState<ModaliteLevainOption[]>([]);
+  const [bbchOptions, setBbchOptions] = useState<BbchOption[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -48,6 +51,9 @@ export default function NewTraitementPage() {
       if (p.data) setParcellesList(p.data);
       if (proto.data) setProtocoleOptions(proto.data);
       if (modLev.data) setModaliteOptions(modLev.data);
+      // Load BBCH stades
+      const { data: bbchData } = await supabase.from("bbch_stades").select("id, code, label").eq("actif", true).order("ordre");
+      if (bbchData) setBbchOptions(bbchData);
     }
     load();
   }, []);
@@ -61,6 +67,7 @@ export default function NewTraitementPage() {
   const [parcelleId, setParcelleId] = useState("");
   const [date, setDate] = useState(today);
   const [stade, setStade] = useState("");
+  const [stadeBbchCode, setStadeBbchCode] = useState("");
   const [operateur, setOperateur] = useState("");
 
   // GPS auto
@@ -257,6 +264,19 @@ export default function NewTraitementPage() {
               ))}
             </div>
           </div>
+
+          {/* Stade BBCH (pour recommandations) */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Stade BBCH (précis)</label>
+            <select value={stadeBbchCode} onChange={e => setStadeBbchCode(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm">
+              <option value="">Sélectionner un stade BBCH…</option>
+              {bbchOptions.map(b => <option key={b.id} value={b.code}>{b.code} — {b.label}</option>)}
+            </select>
+          </div>
+
+          {/* Recommandations dynamiques */}
+          <RecommandationBbch stadeCode={stadeBbchCode} />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Opérateur</label>
             <input type="text" value={operateur} onChange={(e) => setOperateur(e.target.value)} placeholder="Nom" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
