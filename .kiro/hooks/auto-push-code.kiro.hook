@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Auto Push après modifications",
+  "description": "Après chaque exécution de l'agent, rappelle de committer et pousser les changements sur le repo GitHub.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Vérifie s'il y a des fichiers modifiés avec `git status`. Si oui, fais un `git add .`, puis un `git commit` avec un message descriptif en français, et enfin un `git push origin main`. Si aucun changement n'est détecté, ne fais rien."
+  }
+}
