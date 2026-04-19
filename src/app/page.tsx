@@ -51,13 +51,13 @@ export default function HomePage() {
       }
       // Find last obs/trait per site (via parcelle_id → vignoble_id)
       for (const obs of DEMO_OBSERVATIONS) {
-        const site = sitesMap["demo-v1"]; // demo obs are all on demo-v1
+        const site = sitesMap["demo-ct"]; // demo obs are all on demo-ct
         if (site && (!site.derniere_observation || obs.date > site.derniere_observation)) {
           site.derniere_observation = obs.date;
         }
       }
       for (const t of DEMO_TRAITEMENTS) {
-        const site = sitesMap["demo-v1"];
+        const site = sitesMap["demo-ct"];
         if (site && (!site.dernier_traitement || t.date > site.dernier_traitement)) {
           site.dernier_traitement = t.date;
         }
