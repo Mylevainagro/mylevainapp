@@ -1,6 +1,6 @@
 // ============================================================
-// MyLevain Agro Intelligence — Types TypeScript
-// Basé sur les Excel essai-terrain.xlsx & MyLevain_Agro_MVP.xlsx
+// MyLevain Agro Intelligence — Types TypeScript v2
+// Refonte terrain Wilfried — Avril 2026
 // ============================================================
 
 export type Modalite =
@@ -22,6 +22,13 @@ export type Note05 = 0 | 1 | 2 | 3 | 4 | 5;
 // Note 0-3 pour la pression mildiou
 export type Note03 = 0 | 1 | 2 | 3;
 
+// ---- Types terrain v2 ----
+export type TypeMaladie = "mildiou" | "oidium" | "botrytis" | "black_rot";
+export type ZoneMaladie = "feuille" | "grappe";
+export type StadeTraitement = "A" | "B" | "C" | "D" | "E" | "F";
+export type ZoneTraiteeType = "rang" | "surface";
+export type TypeApplication = "pulve_dos" | "tracteur" | "panneaux_recuperateurs";
+
 // ---- Entités principales ----
 
 export interface Vignoble {
@@ -42,77 +49,57 @@ export interface Parcelle {
   created_at: string;
 }
 
+// ---- Observation v2 (terrain Wilfried) ----
+
 export interface Observation {
   id: string;
   parcelle_id: string;
-  rang: number;
   modalite: Modalite;
   date: string;
   heure: string;
   mois: string;
 
-  // Météo
-  meteo: MeteoType | null;
-  temperature: number | null;
-  humidite: number | null;
-  vent: VentType | null;
-  pluie_recente: boolean | null;
-  derniere_pluie: string | null;
-  humidite_sol: HumiditeSol | null;
+  // Nouveaux champs v2
+  stade_bbch: string | null;
+  repetition: number | null; // placette 1, 2, 3…
+  rang: number;
 
-  // Traitement appliqué
-  volume_applique_l: number | null;
-  ph_surnageant: number | null;
-  surnageant_l: number | null;
-  eau_l: number | null;
-  cuivre: boolean | null;
-  date_surnageant: string | null;
-  date_cuivre: string | null;
-
-  // État plante (0-5)
+  // État plante (0-5) — supprimé: epaisseur_feuilles
   vigueur: Note05 | null;
   croissance: Note05 | null;
   homogeneite: Note05 | null;
   couleur_feuilles: Note05 | null;
-  epaisseur_feuilles: Note05 | null;
   turgescence: Note05 | null;
 
-  // Symptômes négatifs (0-5)
+  // Symptômes négatifs (0-5) + nouveaux ravageurs
   brulures: Note05 | null;
   necroses: Note05 | null;
   deformations: Note05 | null;
+  escargots: boolean | null;
+  acariens: boolean | null;
 
-  // Maladies
-  mildiou_presence: Note05 | null;
-  mildiou_intensite: number | null; // pourcentage
-  localisation_mildiou: Localisation | null;
-  progression: Progression | null;
-  pression_mildiou: Note03 | null;
+  // Maladies v2 — stockées dans table séparée maladies_observations
+  // (plus de mildiou_presence, mildiou_intensite, localisation_mildiou, progression, pression_mildiou)
 
   // Grappes
   nb_grappes_par_cep: number | null;
   taille_grappes: Note05 | null;
   homogeneite_grappes: Note05 | null;
 
-  // Rendement (Phase 2)
+  // Rendement (10 ceps marqués)
   nombre_grappes: number | null;
   poids_moyen_grappe: number | null;
+  poids_100_baies: number | null;
   rendement_estime: number | null;
   rendement_reel: number | null;
 
-  // Scores calculés
-  score_plante: number | null;
-  score_sanitaire: number | null;
-  score_rendement: number | null;
-  score_global: number | null;
-
-  // Indicateurs biologiques terrain (reco.md)
+  // Indicateurs biologiques terrain
   vie_biologique_visible: number | null;
   presence_vers_de_terre: number | null;
   structure_sol: number | null;
   odeur_sol: number | null;
 
-  // Qualité raisin (reco.md)
+  // Qualité raisin
   brix: number | null;
   ph_raisin: number | null;
 
@@ -120,6 +107,21 @@ export interface Observation {
   commentaires: string | null;
   created_at: string;
 }
+
+// ---- Maladie observation v2 (structure Wilfried — 20 feuilles) ----
+
+export interface MaladieObservation {
+  id: string;
+  observation_id: string;
+  type: TypeMaladie;
+  zone: ZoneMaladie;
+  nb_feuilles_atteintes: number; // sur 20
+  frequence_pct: number; // auto-calculé
+  surface_atteinte_pct: number; // intensité saisie
+  intensite_pct: number; // auto-calculé
+}
+
+// ---- Traitement v2 (terrain Wilfried) ----
 
 export interface Traitement {
   id: string;
@@ -137,13 +139,26 @@ export interface Traitement {
   notes: string | null;
   created_at: string;
 
-  // Champs enrichis (Phase 2)
+  // Champs enrichis
   type_traitement: 'cuivre' | 'soufre' | 'levain' | 'biocontrole' | 'phytosanitaire' | 'fertilisation' | 'autre' | null;
   matiere_active: string | null;
   concentration: number | null;
   unite: string | null;
   objectif: string | null;
   campagne: string | null;
+
+  // Nouveaux champs v2 terrain
+  stade: StadeTraitement | null;
+  zone_traitee_type: ZoneTraiteeType | null;
+  zone_traitee_rang: string | null; // "R1", "R2"…
+  zone_traitee_surface_m2: number | null;
+  type_application: TypeApplication | null;
+  prelevement_sol: boolean | null;
+  couvert: string | null;
+  volume_bouillie_l: number | null;
+  ph_eau: number | null;
+  ph_bouillie: number | null;
+  origine_eau: string | null;
 }
 
 export interface AnalyseSol {
@@ -180,7 +195,7 @@ export interface AnalyseSol {
   score_sante_sol: number | null;
   score_contamination_metaux: number | null;
 
-  // Champs complémentaires (reco.md)
+  // Champs complémentaires
   calcium: number | null;
   magnesium: number | null;
   cec: number | null;
@@ -239,14 +254,12 @@ export interface ModaliteRef {
   volume_l: number;
 }
 
-// Pour le formulaire de saisie
-export type ObservationFormData = Omit<Observation, "id" | "created_at" | "score_plante" | "score_sanitaire">;
+// Pour le formulaire de saisie (v2 — sans météo, sans traitement, sans scores)
+export type ObservationFormData = Omit<Observation, "id" | "created_at">;
 
 // ============================================================
-// Phase 2 — Nouvelles interfaces
+// Phase 2 — Interfaces existantes
 // ============================================================
-
-// ---- Guide de notation (Exigence 1) ----
 
 export interface GuideNotation {
   id: string;
@@ -263,8 +276,6 @@ export interface GuideNotation {
   actif: boolean;
   ordre_affichage: number;
 }
-
-// ---- Multi-cultures (Exigence 2) ----
 
 export interface TypeCulture {
   id: string;
@@ -321,8 +332,6 @@ export interface ZoneCulture {
   actif: boolean;
 }
 
-// ---- Export (Exigence 3) ----
-
 export interface ExportFilters {
   site_id?: string;
   zone_culture_id?: string;
@@ -334,8 +343,6 @@ export interface ExportFilters {
 
 export type ExportFormat = 'csv' | 'excel' | 'json';
 
-// ---- Validation complétude (Exigence 5) ----
-
 export interface CompletudeResult {
   status: 'complete' | 'partial' | 'incomplete';
   can_export: boolean;
@@ -344,8 +351,6 @@ export interface CompletudeResult {
   message: string;
 }
 
-// ---- Rapport PDF (Exigence 4) ----
-
 export interface RapportConfig {
   site_id: string;
   zone_culture_id?: string;
@@ -353,8 +358,6 @@ export interface RapportConfig {
   date_debut?: string;
   date_fin?: string;
 }
-
-// ---- Import PDF labo (Exigence 6) ----
 
 export interface ParsedLaboValue {
   champ: string;
@@ -368,8 +371,6 @@ export interface ParsedLaboResult {
   texte_brut: string;
   fichier_nom: string;
 }
-
-// ---- Météo Open-Meteo (Exigence 9) ----
 
 export interface MeteoActuelle {
   temperature: number;
@@ -392,8 +393,6 @@ export interface MeteoData {
   previsions: PrevisionJour[];
 }
 
-// ---- Offline sync (Exigence 10) ----
-
 export interface PendingSync {
   id: string;
   type: 'observation' | 'traitement';
@@ -401,8 +400,6 @@ export interface PendingSync {
   created_at: string;
   status: 'pending' | 'syncing' | 'error';
 }
-
-// ---- Résumé campagne (Exigence 7) ----
 
 export interface ResumeCampagne {
   id: string;
@@ -416,8 +413,6 @@ export interface ResumeCampagne {
   commentaire_general: string | null;
 }
 
-// ---- Timeline (Exigence 15) ----
-
 export interface TimelineEvent {
   id: string;
   type: 'observation' | 'traitement' | 'analyse_sol';
@@ -428,19 +423,12 @@ export interface TimelineEvent {
   couleur: string;
 }
 
-// ---- Validation formulaire (Exigence 11) ----
-
 export interface ValidationError {
   champ: string;
   message: string;
   type: 'required' | 'range' | 'format';
 }
 
-// ============================================================
-// Consolidation structure (reco.md)
-// ============================================================
-
-// ---- Notifications ----
 export interface Notification {
   id: string;
   user_id: string | null;
@@ -451,7 +439,6 @@ export interface Notification {
   created_at: string;
 }
 
-// ---- Accès vigneron par parcelle ----
 export interface UserParcelle {
   id: string;
   user_id: string;
@@ -459,7 +446,6 @@ export interface UserParcelle {
   created_at: string;
 }
 
-// ---- Indice de performance agronomique (KPI) ----
 export interface IndicePerformance {
   id: string;
   zone_culture_id: string;
@@ -472,11 +458,6 @@ export interface IndicePerformance {
   created_at: string;
 }
 
-// ============================================================
-// Rajouts terrain (rajouts.txt)
-// ============================================================
-
-// ---- Protocoles ----
 export interface Protocole {
   id: string;
   code: string;
@@ -487,7 +468,6 @@ export interface Protocole {
   ordre: number;
 }
 
-// ---- Produits MyLevain ----
 export interface Produit {
   id: string;
   code: string;

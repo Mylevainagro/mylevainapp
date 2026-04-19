@@ -10,7 +10,7 @@ import { AnalyseSol, Observation, Recommandation } from "./types";
 export function calcScorePlante(obs: Partial<Observation>): number | null {
   const raw = [
     obs.vigueur, obs.croissance, obs.homogeneite,
-    obs.couleur_feuilles, obs.epaisseur_feuilles, obs.turgescence,
+    obs.couleur_feuilles, obs.turgescence,
   ];
   const vals = raw.filter((v) => v !== null && v !== undefined) as number[];
   if (vals.length === 0) return null;
@@ -22,26 +22,18 @@ export function calcScorePlante(obs: Partial<Observation>): number | null {
  */
 export function calcScoreSanitaire(obs: Partial<Observation>): number | null {
   const symptomes = filterNums([obs.brulures, obs.necroses, obs.deformations]);
-  const maladie = filterNums([obs.mildiou_presence, obs.pression_mildiou]);
-  if (symptomes.length === 0 && maladie.length === 0) return null;
+  if (symptomes.length === 0) return null;
 
-  const avgSymptomes = symptomes.length > 0 ? avg(symptomes) : 0;
-  const avgMaladie = maladie.length > 0 ? avg(maladie) * (5 / 3) : 0;
-  return round(clamp(5 - (avgSymptomes + avgMaladie) / 2));
+  const avgSymptomes = avg(symptomes);
+  return round(clamp(5 - avgSymptomes));
 }
 
 /**
- * Score mildiou (0-5) — 0 = aucun, 5 = très fort
+ * Score mildiou — désormais calculé depuis maladies_observations (table séparée)
+ * Cette fonction est conservée pour compatibilité mais retourne null
  */
 export function calcScoreMildiou(obs: Partial<Observation>): number | null {
-  const vals = filterNums([obs.mildiou_presence, obs.pression_mildiou]);
-  if (vals.length === 0 && obs.mildiou_intensite == null) return null;
-
-  const presenceScore = vals.length > 0 ? avg(vals) : 0;
-  // Intensité (%) normalisée sur 5
-  const intensiteScore = obs.mildiou_intensite != null ? (obs.mildiou_intensite / 100) * 5 : 0;
-  const count = (vals.length > 0 ? 1 : 0) + (obs.mildiou_intensite != null ? 1 : 0);
-  return round(clamp((presenceScore + intensiteScore) / Math.max(count, 1)));
+  return null;
 }
 
 /**
@@ -169,37 +161,21 @@ export function genererRecommandations(input: RecoInput): Partial<Recommandation
     });
   }
 
-  // Règle 2 : Pression mildiou modérée + pluie récente
-  if (scoreMildiou != null && scoreMildiou >= 1.5 && scoreMildiou < 3 && obs.pluie_recente) {
-    recos.push({
-      date: today,
-      type: "preventif",
-      niveau_risque: "moyen",
-      maladie_cible: "mildiou",
-      action: "traiter",
-      produit: "levain",
-      frequence: "tous les 10 jours",
-      explication: `Mildiou modéré (${scoreMildiou}/5) + pluie récente. Traitement préventif levain recommandé.`,
-      score_confiance: 65,
-      source: "regle_metier",
-    });
-  }
-
-  // Règle 3 : Tout va bien, surveiller
-  if (scoreMildiou != null && scoreMildiou < 1.5) {
+  // Règle 2 : Symptômes de phytotoxicité → réduire cuivre
+  const symptomes = filterNums([obs.brulures, obs.necroses]);
+  if (symptomes.length > 0 && avg(symptomes) >= 2) {
     recos.push({
       date: today,
       type: "observation",
-      niveau_risque: "faible",
-      maladie_cible: "mildiou",
+      niveau_risque: "moyen",
       action: "surveiller",
-      explication: `Pression mildiou faible (${scoreMildiou}/5). Continuer la surveillance.`,
-      score_confiance: 80,
+      explication: `Symptômes de phytotoxicité détectés (brûlures/nécroses). Vérifier dose cuivre et envisager remplacement par levain seul.`,
+      score_confiance: 70,
       source: "regle_metier",
     });
   }
 
-  // Règle 4 : Vigueur faible → booster levain
+  // Règle 3 : Vigueur faible → booster levain
   if (scoreVigueur != null && scoreVigueur < 2.5) {
     recos.push({
       date: today,
@@ -212,20 +188,6 @@ export function genererRecommandations(input: RecoInput): Partial<Recommandation
       frequence: "tous les 7 jours",
       explication: `Vigueur faible (${scoreVigueur}/5). Application levain dose forte recommandée.`,
       score_confiance: 60,
-      source: "regle_metier",
-    });
-  }
-
-  // Règle 5 : Brûlures/nécroses détectées → réduire cuivre
-  const symptomes = filterNums([obs.brulures, obs.necroses]);
-  if (symptomes.length > 0 && avg(symptomes) >= 2) {
-    recos.push({
-      date: today,
-      type: "observation",
-      niveau_risque: "moyen",
-      action: "surveiller",
-      explication: `Symptômes de phytotoxicité détectés (brûlures/nécroses). Vérifier dose cuivre et envisager remplacement par levain seul.`,
-      score_confiance: 70,
       source: "regle_metier",
     });
   }

@@ -3,6 +3,7 @@ import type { Observation, ValidationError } from '@/lib/types';
 /**
  * Plages numériques autorisées par champ.
  * Chaque entrée : [min, max, label descriptif]
+ * v2 : supprimé epaisseur_feuilles, mildiou_presence, pression_mildiou, mildiou_intensite, température, humidité
  */
 const RANGE_RULES: Record<string, [number, number, string]> = {
   // État plante — notes 0-5
@@ -10,7 +11,6 @@ const RANGE_RULES: Record<string, [number, number, string]> = {
   croissance: [0, 5, 'La note doit être entre 0 et 5'],
   homogeneite: [0, 5, 'La note doit être entre 0 et 5'],
   couleur_feuilles: [0, 5, 'La note doit être entre 0 et 5'],
-  epaisseur_feuilles: [0, 5, 'La note doit être entre 0 et 5'],
   turgescence: [0, 5, 'La note doit être entre 0 et 5'],
 
   // Symptômes — notes 0-5
@@ -18,22 +18,15 @@ const RANGE_RULES: Record<string, [number, number, string]> = {
   necroses: [0, 5, 'La note doit être entre 0 et 5'],
   deformations: [0, 5, 'La note doit être entre 0 et 5'],
 
-  // Maladies — notes 0-5
-  mildiou_presence: [0, 5, 'La note doit être entre 0 et 5'],
-
   // Grappes — notes 0-5
   taille_grappes: [0, 5, 'La note doit être entre 0 et 5'],
   homogeneite_grappes: [0, 5, 'La note doit être entre 0 et 5'],
 
-  // Pression mildiou — note 0-3
-  pression_mildiou: [0, 3, 'La note doit être entre 0 et 3'],
+  // Rendement
+  poids_100_baies: [0, 500, 'Le poids 100 baies doit être entre 0 et 500 g'],
 
-  // Mildiou intensité — pourcentage 0-100
-  mildiou_intensite: [0, 100, 'La valeur doit être entre 0 et 100 (%)'],
-
-  // Météo
-  temperature: [-10, 50, 'La température doit être entre -10 et 50 °C'],
-  humidite: [0, 100, "L'humidité doit être entre 0 et 100 (%)"],
+  // Répétition
+  repetition: [1, 10, 'La répétition doit être entre 1 et 10'],
 };
 
 /**

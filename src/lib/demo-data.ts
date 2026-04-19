@@ -1,11 +1,11 @@
 // ============================================================
-// MyLevain Agro — Données de démonstration réalistes
-// Pour présentation investisseurs
+// MyLevain Agro — Données de démonstration v2
+// Adapté structure terrain Wilfried — Avril 2026
 // ============================================================
 
 import type { Observation, Traitement, AnalyseSol, Modalite } from './types';
 
-// ---- Vignobles & Parcelles (viticulture) ----
+// ---- Vignobles & Parcelles ----
 
 export const DEMO_VIGNOBLES = [
   { id: 'demo-v1', nom: 'Château Piotte', localisation: 'Saint-Émilion', appellation: 'Saint-Émilion Grand Cru', type_sol: 'Argilo-calcaire', type_site: 'chateau' },
@@ -24,7 +24,7 @@ export const DEMO_PARCELLES = [
   { id: 'demo-p7', vignoble_id: 'demo-v4', nom: 'Noisetiers — Parcelle Nord', cepage: 'Noisetier commun', nb_rangs: 3 },
 ];
 
-// ---- Observations (campagne 2026, 3 passages mensuels × 7 rangs) ----
+// ---- Observations v2 (sans météo, sans traitement, sans scores calculés) ----
 
 const MOIS_PASSAGES = [
   { mois: 'mai', date: '2026-05-15' },
@@ -42,6 +42,8 @@ const MODALITES_RANGS: { rang: number; modalite: Modalite }[] = [
   { rang: 7, modalite: 'Témoin' },
 ];
 
+const STADES_PAR_MOIS = ['15', '23', '33'];
+
 function genObservations(): Observation[] {
   const obs: Observation[] = [];
   let idx = 0;
@@ -53,15 +55,8 @@ function genObservations(): Observation[] {
       const isCuivre = mr.modalite.includes('Cuivre');
       const monthIdx = MOIS_PASSAGES.indexOf(passage);
 
-      // Levain rangs show better scores over time
       const vigueurBase = isLevain ? 3.5 : 3;
       const vigueur = Math.min(5, Math.round((vigueurBase + monthIdx * (isLevain ? 0.5 : 0.2)) * 10) / 10) as 0|1|2|3|4|5;
-
-      const mildiouBase = isLevain ? (isCuivre ? 0.5 : 1) : 2;
-      const mildiouPresence = Math.min(5, Math.round(mildiouBase + monthIdx * (isLevain ? 0.2 : 0.8))) as 0|1|2|3|4|5;
-
-      const scorePlante = Math.round((vigueur * 0.6 + (5 - mildiouPresence) * 0.4) * 10) / 10;
-      const scoreSanitaire = Math.round((5 - mildiouPresence * 0.8) * 10) / 10;
 
       obs.push({
         id: `demo-obs-${idx}`,
@@ -71,45 +66,26 @@ function genObservations(): Observation[] {
         date: passage.date,
         heure: '09:30',
         mois: passage.mois,
-        meteo: monthIdx === 2 ? 'Ensoleillé' : 'Nuageux',
-        temperature: 18 + monthIdx * 4,
-        humidite: 70 - monthIdx * 8,
-        vent: 'Faible',
-        pluie_recente: monthIdx === 0,
-        derniere_pluie: monthIdx === 0 ? '2026-05-13' : null,
-        humidite_sol: monthIdx === 0 ? 'Humide' : 'Sec',
-        volume_applique_l: isLevain ? 4 : null,
-        ph_surnageant: isLevain ? 4.2 : null,
-        surnageant_l: isLevain ? (mr.modalite.includes('1/4') ? 1 : 2) : null,
-        eau_l: isLevain ? (mr.modalite.includes('1/4') ? 3 : 2) : null,
-        cuivre: isCuivre,
-        date_surnageant: isLevain ? passage.date : null,
-        date_cuivre: isCuivre ? passage.date : null,
+        stade_bbch: STADES_PAR_MOIS[monthIdx],
+        repetition: 1,
         vigueur,
         croissance: Math.min(5, vigueur) as 0|1|2|3|4|5,
         homogeneite: (isLevain ? 4 : 3) as 0|1|2|3|4|5,
         couleur_feuilles: (isLevain ? 4 : 3) as 0|1|2|3|4|5,
-        epaisseur_feuilles: (isLevain ? 4 : 3) as 0|1|2|3|4|5,
         turgescence: (isLevain ? 4 : 3) as 0|1|2|3|4|5,
         brulures: 0,
         necroses: (isLevain ? 0 : 1) as 0|1|2|3|4|5,
         deformations: 0,
-        mildiou_presence: mildiouPresence,
-        mildiou_intensite: mildiouPresence * 12,
-        localisation_mildiou: mildiouPresence > 1 ? 'Feuilles' : null,
-        progression: monthIdx > 0 ? (isLevain ? 'En baisse' : 'En hausse') : 'Stable',
-        pression_mildiou: Math.min(3, Math.round(mildiouPresence * 0.6)) as 0|1|2|3,
+        escargots: monthIdx === 0 ? true : false,
+        acariens: false,
         nb_grappes_par_cep: 10 + (isLevain ? 3 : 0),
         taille_grappes: (isLevain ? 4 : 3) as 0|1|2|3|4|5,
         homogeneite_grappes: (isLevain ? 4 : 3) as 0|1|2|3|4|5,
         nombre_grappes: 10 + (isLevain ? 3 : 0),
         poids_moyen_grappe: 140 + (isLevain ? 25 : 0),
+        poids_100_baies: monthIdx === 2 ? (isLevain ? 185 : 165) : null,
         rendement_estime: isLevain ? (isCuivre ? 9500 : 8800) : 7200,
         rendement_reel: monthIdx === 2 ? (isLevain ? (isCuivre ? 9800 : 9100) : 7000) : null,
-        score_plante: scorePlante,
-        score_sanitaire: scoreSanitaire,
-        score_rendement: null,
-        score_global: null,
         vie_biologique_visible: isLevain ? 4 : 2,
         presence_vers_de_terre: isLevain ? 3 : 1,
         structure_sol: isLevain ? 4 : 3,
@@ -118,7 +94,7 @@ function genObservations(): Observation[] {
         ph_raisin: monthIdx === 2 ? 3.4 : null,
         commentaires: isLevain
           ? `Rang ${mr.rang} — Bonne vigueur, feuillage dense et sain.`
-          : `Rang ${mr.rang} — Développement normal, quelques taches mildiou.`,
+          : `Rang ${mr.rang} — Développement normal.`,
         created_at: `${passage.date}T10:00:00Z`,
       });
     }
@@ -147,7 +123,7 @@ function genTraitements(): Traitement[] {
         date,
         produit: isCuivre ? 'Surnageant + Cuivre' : 'Surnageant de levain',
         dose: mr.modalite.includes('1/4') ? '1L/3L eau' : '2L/2L eau',
-        methode_application: 'Pulvérisation',
+        methode_application: 'pulve_dos',
         temperature: 20,
         humidite: 65,
         conditions_meteo: 'Nuageux',
@@ -160,6 +136,17 @@ function genTraitements(): Traitement[] {
         unite: isCuivre ? 'g/L' : null,
         objectif: 'Prévention mildiou + stimulation',
         campagne: '2026',
+        stade: 'B',
+        zone_traitee_type: 'rang',
+        zone_traitee_rang: `R${mr.rang}`,
+        zone_traitee_surface_m2: null,
+        type_application: 'pulve_dos',
+        prelevement_sol: false,
+        couvert: 'Nuageux',
+        volume_bouillie_l: 4,
+        ph_eau: 7.2,
+        ph_bouillie: 5.8,
+        origine_eau: 'Forage',
       });
     }
   }
@@ -175,75 +162,39 @@ function genAnalyses(): AnalyseSol[] {
       parcelle_id: 'demo-p1',
       date_prelevement: '2026-03-15',
       phase: 'T0',
-      ph: 6.8,
-      matiere_organique_pct: 3.2,
-      rapport_c_n: 11.5,
-      azote_total: 1.8,
-      phosphore: 45,
-      potassium: 180,
-      biomasse_microbienne: 380,
-      respiration_sol: 22,
-      bacteries_totales: null,
-      champignons_totaux: null,
-      cuivre_total: 42,
-      cuivre_biodisponible: 8.5,
-      cadmium_total: 0.18,
-      cadmium_biodisponible: null,
-      plomb_total: 15,
-      plomb_biodisponible: null,
-      arsenic_total: 4.2,
-      arsenic_biodisponible: null,
-      manganese_total: 280,
-      manganese_biodisponible: null,
-      score_sante_sol: 3.5,
-      score_contamination_metaux: 2.1,
-      calcium: 2800,
-      magnesium: 180,
-      cec: 12.5,
-      type_analyse: 'labo',
-      analyse_microbiote: null,
-      fichier_pdf_url: null,
-      created_at: '2026-03-15T10:00:00Z',
+      ph: 6.8, matiere_organique_pct: 3.2, rapport_c_n: 11.5, azote_total: 1.8,
+      phosphore: 45, potassium: 180, biomasse_microbienne: 380, respiration_sol: 22,
+      bacteries_totales: null, champignons_totaux: null,
+      cuivre_total: 42, cuivre_biodisponible: 8.5,
+      cadmium_total: 0.18, cadmium_biodisponible: null,
+      plomb_total: 15, plomb_biodisponible: null,
+      arsenic_total: 4.2, arsenic_biodisponible: null,
+      manganese_total: 280, manganese_biodisponible: null,
+      score_sante_sol: 3.5, score_contamination_metaux: 2.1,
+      calcium: 2800, magnesium: 180, cec: 12.5,
+      type_analyse: 'labo', analyse_microbiote: null,
+      fichier_pdf_url: null, created_at: '2026-03-15T10:00:00Z',
     },
     {
       id: 'demo-analyse-tf',
       parcelle_id: 'demo-p1',
       date_prelevement: '2026-09-20',
       phase: 'Tfinal',
-      ph: 6.9,
-      matiere_organique_pct: 3.8,
-      rapport_c_n: 10.8,
-      azote_total: 2.1,
-      phosphore: 52,
-      potassium: 195,
-      biomasse_microbienne: 520,
-      respiration_sol: 28,
-      bacteries_totales: null,
-      champignons_totaux: null,
-      cuivre_total: 38,
-      cuivre_biodisponible: 7.2,
-      cadmium_total: 0.16,
-      cadmium_biodisponible: null,
-      plomb_total: 14,
-      plomb_biodisponible: null,
-      arsenic_total: 3.9,
-      arsenic_biodisponible: null,
-      manganese_total: 265,
-      manganese_biodisponible: null,
-      score_sante_sol: 4.2,
-      score_contamination_metaux: 1.8,
-      calcium: 3100,
-      magnesium: 210,
-      cec: 14.2,
-      type_analyse: 'labo',
-      analyse_microbiote: null,
-      fichier_pdf_url: null,
-      created_at: '2026-09-20T10:00:00Z',
+      ph: 6.9, matiere_organique_pct: 3.8, rapport_c_n: 10.8, azote_total: 2.1,
+      phosphore: 52, potassium: 195, biomasse_microbienne: 520, respiration_sol: 28,
+      bacteries_totales: null, champignons_totaux: null,
+      cuivre_total: 38, cuivre_biodisponible: 7.2,
+      cadmium_total: 0.16, cadmium_biodisponible: null,
+      plomb_total: 14, plomb_biodisponible: null,
+      arsenic_total: 3.9, arsenic_biodisponible: null,
+      manganese_total: 265, manganese_biodisponible: null,
+      score_sante_sol: 4.2, score_contamination_metaux: 1.8,
+      calcium: 3100, magnesium: 210, cec: 14.2,
+      type_analyse: 'labo', analyse_microbiote: null,
+      fichier_pdf_url: null, created_at: '2026-09-20T10:00:00Z',
     },
   ];
 }
-
-// ---- Statistiques résumées pour la home ----
 
 export const DEMO_STATS = {
   nb_observations: 21,
@@ -261,8 +212,6 @@ export const DEMO_STATS = {
   derniere_observation: '16 juillet 2026',
   dernier_traitement: '15 juillet 2026',
 };
-
-// ---- Export all ----
 
 export const DEMO_OBSERVATIONS = genObservations();
 export const DEMO_TRAITEMENTS = genTraitements();

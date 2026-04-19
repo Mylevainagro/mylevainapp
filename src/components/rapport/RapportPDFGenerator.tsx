@@ -52,8 +52,8 @@ export function RapportPDFGenerator() {
       if (isDemo) {
         obsData = DEMO_OBSERVATIONS.map((o) => ({
           date: o.date, rang: o.rang, modalite: o.modalite,
-          vigueur: o.vigueur, mildiou_presence: o.mildiou_presence,
-          score_plante: o.score_plante, score_sanitaire: o.score_sanitaire,
+          vigueur: o.vigueur,
+          score_plante: null, score_sanitaire: null,
         }));
         traitData = DEMO_TRAITEMENTS.map((t) => ({
           date: t.date, produit: t.produit, type_traitement: t.type_traitement,
@@ -72,8 +72,8 @@ export function RapportPDFGenerator() {
         ]);
         obsData = (obsRes.data ?? []).map((o: Record<string, unknown>) => ({
           date: String(o.date ?? ""), rang: Number(o.rang ?? 0), modalite: String(o.modalite ?? ""),
-          vigueur: o.vigueur as number | null, mildiou_presence: o.mildiou_presence as number | null,
-          score_plante: o.score_plante as number | null, score_sanitaire: o.score_sanitaire as number | null,
+          vigueur: o.vigueur as number | null,
+          score_plante: null, score_sanitaire: null,
         }));
         traitData = (traitRes.data ?? []).map((t: Record<string, unknown>) => ({
           date: String(t.date ?? ""), produit: String(t.produit ?? ""),

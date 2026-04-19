@@ -11,23 +11,28 @@ import { HelpIcon } from "@/components/ui/HelpIcon";
 import { ValidationMessage } from "@/components/ui/ValidationMessage";
 import { validateObservation } from "@/lib/validation";
 import { INDICATEUR_MAPPING } from "@/lib/guide-notation";
-import type { ValidationError, ObservationFormData } from "@/lib/types";
+import type { ValidationError, ObservationFormData, TypeMaladie, ZoneMaladie } from "@/lib/types";
 import {
-  METEO_OPTIONS,
-  VENT_OPTIONS,
-  HUMIDITE_SOL_OPTIONS,
-  LOCALISATION_OPTIONS,
-  PROGRESSION_OPTIONS,
+  STADES_BBCH,
+  TYPES_MALADIE,
+  ZONES_MALADIE,
+  NB_FEUILLES_ECHANTILLON,
+  MODALITES_REF,
 } from "@/lib/constants";
-import { calcScorePlante, calcScoreSanitaire, calcScoreRendement } from "@/lib/scoring";
 import { RendementFields } from "@/components/forms/RendementFields";
-import { DerniereAnalyseLaboCard } from "@/components/forms/DerniereAnalyseLaboCard";
 import { supabase } from "@/lib/supabase/client";
-import { MODALITES_REF } from "@/lib/constants";
 
 interface VignobleItem { id: string; nom: string; }
 interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
 interface ModaliteItem { rang: number; modalite: string; description: string | null; surnageant_l: number; eau_l: number; volume_l: number; }
+
+// Structure maladie v2 (Wilfried — 20 feuilles)
+interface MaladieEntry {
+  type: TypeMaladie;
+  zone: ZoneMaladie;
+  nb_feuilles_atteintes: number;
+  surface_atteinte_pct: number;
+}
 
 interface ObservationFormProps {
   initialData?: ObservationFormData;
@@ -37,7 +42,7 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   const today = new Date().toISOString().split("T")[0];
   const now = new Date().toTimeString().slice(0, 5);
 
-  // Données dynamiques depuis Supabase (avec fallback local pour les modalités)
+  // Données dynamiques
   const [vignoblesList, setVignoblesList] = useState<VignobleItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
   const [modalitesList, setModalitesList] = useState<ModaliteItem[]>(
@@ -53,7 +58,6 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
       ]);
       if (v.data) setVignoblesList(v.data);
       if (p.data) setParcellesList(p.data);
-      // Use Supabase data if available, otherwise keep the local fallback
       if (m.data && m.data.length > 0) setModalitesList(m.data);
     }
     load();
@@ -62,111 +66,50 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({ message: "", type: "success", visible: false });
   const hideToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
+
+  // 1. Identification
   const [vignoble, setVignoble] = useState("");
   const [parcelleId, setParcelleId] = useState(initialData?.parcelle_id ?? "");
   const [rang, setRang] = useState<number>(initialData?.rang ?? 0);
   const [date, setDate] = useState(initialData?.date ?? today);
   const [heure, setHeure] = useState(initialData?.heure ?? now);
+  const [stadeBbch, setStadeBbch] = useState(initialData?.stade_bbch ?? "");
+  const [repetition, setRepetition] = useState<number | null>(initialData?.repetition ?? null);
 
-  // Météo
-  const [meteo, setMeteo] = useState(initialData?.meteo ?? "");
-  const [temperature, setTemperature] = useState<number | null>(initialData?.temperature ?? null);
-  const [humidite, setHumidite] = useState<number | null>(initialData?.humidite ?? null);
-  const [vent, setVent] = useState(initialData?.vent ?? "");
-  const [pluieRecente, setPluieRecente] = useState(initialData?.pluie_recente === true ? "Oui" : initialData?.pluie_recente === false ? "Non" : "");
-  const [dernierePluie, setDernierePluie] = useState(initialData?.derniere_pluie ?? "");
-  const [humiditeSol, setHumiditeSol] = useState(initialData?.humidite_sol ?? "");
-
-  // Traitement
-  const [volumeApplique, setVolumeApplique] = useState<number | null>(initialData?.volume_applique_l ?? null);
-  const [phSurnageant, setPhSurnageant] = useState<number | null>(initialData?.ph_surnageant ?? null);
-  const [surnageantL, setSurnageantL] = useState<number | null>(initialData?.surnageant_l ?? null);
-  const [eauL, setEauL] = useState<number | null>(initialData?.eau_l ?? null);
-  const [cuivre, setCuivre] = useState(initialData?.cuivre === true ? "Oui" : initialData?.cuivre === false ? "Non" : "");
-  const [dateSurnageant, setDateSurnageant] = useState(initialData?.date_surnageant ?? "");
-  const [dateCuivre, setDateCuivre] = useState(initialData?.date_cuivre ?? "");
-
-  // État plante
+  // 2. État plante (sans épaisseur feuilles)
   const [vigueur, setVigueur] = useState<number | null>(initialData?.vigueur ?? null);
   const [croissance, setCroissance] = useState<number | null>(initialData?.croissance ?? null);
   const [homogeneite, setHomogeneite] = useState<number | null>(initialData?.homogeneite ?? null);
   const [couleurFeuilles, setCouleurFeuilles] = useState<number | null>(initialData?.couleur_feuilles ?? null);
-  const [epaisseurFeuilles, setEpaisseurFeuilles] = useState<number | null>(initialData?.epaisseur_feuilles ?? null);
   const [turgescence, setTurgescence] = useState<number | null>(initialData?.turgescence ?? null);
 
-  // Symptômes
+  // 3. Symptômes + ravageurs
   const [brulures, setBrulures] = useState<number | null>(initialData?.brulures ?? null);
   const [necroses, setNecroses] = useState<number | null>(initialData?.necroses ?? null);
   const [deformations, setDeformations] = useState<number | null>(initialData?.deformations ?? null);
+  const [escargots, setEscargots] = useState<boolean>(initialData?.escargots ?? false);
+  const [acariens, setAcariens] = useState<boolean>(initialData?.acariens ?? false);
 
-  // Maladies
-  const [mildiouPresence, setMildiouPresence] = useState<number | null>(initialData?.mildiou_presence ?? null);
-  const [mildiouIntensite, setMildiouIntensite] = useState<number | null>(initialData?.mildiou_intensite ?? null);
-  const [localisationMildiou, setLocalisationMildiou] = useState(initialData?.localisation_mildiou ?? "");
-  const [progression, setProgression] = useState(initialData?.progression ?? "");
-  const [pressionMildiou, setPressionMildiou] = useState<number | null>(initialData?.pression_mildiou ?? null);
+  // 4. Maladies v2 (multi-maladie, 20 feuilles)
+  const [maladies, setMaladies] = useState<MaladieEntry[]>([]);
 
-  // Grappes
+  // 5. Grappes
   const [nbGrappes, setNbGrappes] = useState<number | null>(initialData?.nb_grappes_par_cep ?? null);
   const [tailleGrappes, setTailleGrappes] = useState<number | null>(initialData?.taille_grappes ?? null);
   const [homogeneiteGrappes, setHomogeneiteGrappes] = useState<number | null>(initialData?.homogeneite_grappes ?? null);
 
-  // Rendement
+  // 6. Rendement (10 ceps marqués)
   const [nombreGrappes, setNombreGrappes] = useState<number | null>(initialData?.nombre_grappes ?? null);
   const [poidsMoyenGrappe, setPoidsMoyenGrappe] = useState<number | null>(initialData?.poids_moyen_grappe ?? null);
+  const [poids100Baies, setPoids100Baies] = useState<number | null>(initialData?.poids_100_baies ?? null);
   const [rendementEstime, setRendementEstime] = useState<number | null>(initialData?.rendement_estime ?? null);
   const [rendementReel, setRendementReel] = useState<number | null>(initialData?.rendement_reel ?? null);
 
-  // Notes
+  // 7. Notes
   const [commentaires, setCommentaires] = useState(initialData?.commentaires ?? "");
 
-  // Photos
+  // 8. Photos
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
-
-  // Re-fill form when initialData arrives (async duplication)
-  useEffect(() => {
-    if (!initialData) return;
-    setParcelleId(initialData.parcelle_id ?? "");
-    setRang(initialData.rang ?? 0);
-    setDate(initialData.date ?? today);
-    setHeure(initialData.heure ?? now);
-    setMeteo(initialData.meteo ?? "");
-    setTemperature(initialData.temperature ?? null);
-    setHumidite(initialData.humidite ?? null);
-    setVent(initialData.vent ?? "");
-    setPluieRecente(initialData.pluie_recente === true ? "Oui" : initialData.pluie_recente === false ? "Non" : "");
-    setDernierePluie(initialData.derniere_pluie ?? "");
-    setHumiditeSol(initialData.humidite_sol ?? "");
-    setVolumeApplique(initialData.volume_applique_l ?? null);
-    setPhSurnageant(initialData.ph_surnageant ?? null);
-    setSurnageantL(initialData.surnageant_l ?? null);
-    setEauL(initialData.eau_l ?? null);
-    setCuivre(initialData.cuivre === true ? "Oui" : initialData.cuivre === false ? "Non" : "");
-    setDateSurnageant(initialData.date_surnageant ?? "");
-    setDateCuivre(initialData.date_cuivre ?? "");
-    setVigueur(initialData.vigueur ?? null);
-    setCroissance(initialData.croissance ?? null);
-    setHomogeneite(initialData.homogeneite ?? null);
-    setCouleurFeuilles(initialData.couleur_feuilles ?? null);
-    setEpaisseurFeuilles(initialData.epaisseur_feuilles ?? null);
-    setTurgescence(initialData.turgescence ?? null);
-    setBrulures(initialData.brulures ?? null);
-    setNecroses(initialData.necroses ?? null);
-    setDeformations(initialData.deformations ?? null);
-    setMildiouPresence(initialData.mildiou_presence ?? null);
-    setMildiouIntensite(initialData.mildiou_intensite ?? null);
-    setLocalisationMildiou(initialData.localisation_mildiou ?? "");
-    setProgression(initialData.progression ?? "");
-    setPressionMildiou(initialData.pression_mildiou ?? null);
-    setNbGrappes(initialData.nb_grappes_par_cep ?? null);
-    setTailleGrappes(initialData.taille_grappes ?? null);
-    setHomogeneiteGrappes(initialData.homogeneite_grappes ?? null);
-    setNombreGrappes(initialData.nombre_grappes ?? null);
-    setPoidsMoyenGrappe(initialData.poids_moyen_grappe ?? null);
-    setRendementEstime(initialData.rendement_estime ?? null);
-    setRendementReel(initialData.rendement_reel ?? null);
-    setCommentaires(initialData.commentaires ?? "");
-  }, [initialData]);
 
   // Validation
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -179,48 +122,43 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   const modaliteRef = rang > 0 ? modalitesList.find((m) => m.rang === rang) : null;
   const modalite = modaliteRef?.modalite ?? "";
 
-  // Parcelles disponibles selon le vignoble sélectionné
+  // Parcelles filtrées par site
   const parcelles = vignoble ? parcellesList.filter(p => {
     const v = vignoblesList.find(vv => vv.nom === vignoble);
     return v && p.vignoble_id === v.id;
   }) : [];
 
-  // Rangs disponibles
   const rangs = modalitesList.map(m => m.rang);
 
-  // Auto-fill volumes quand on sélectionne un rang
-  function handleRangChange(r: number) {
-    setRang(r);
-    const ref = modalitesList.find((m) => m.rang === r);
-    if (ref) {
-      setSurnageantL(ref.surnageant_l || null);
-      setEauL(ref.eau_l || null);
-      setVolumeApplique(ref.volume_l || null);
-    }
+  // ---- Maladies helpers ----
+  function addMaladie() {
+    setMaladies(prev => [...prev, { type: "mildiou", zone: "feuille", nb_feuilles_atteintes: 0, surface_atteinte_pct: 0 }]);
   }
 
+  function updateMaladie(index: number, field: keyof MaladieEntry, value: string | number) {
+    setMaladies(prev => prev.map((m, i) => i === index ? { ...m, [field]: value } : m));
+  }
+
+  function removeMaladie(index: number) {
+    setMaladies(prev => prev.filter((_, i) => i !== index));
+  }
+
+  // ---- Submit ----
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Validation via validateObservation
     const obsPartial = {
       parcelle_id: parcelleId,
       rang,
       date,
-      temperature,
-      humidite,
       vigueur,
       croissance,
       homogeneite,
       couleur_feuilles: couleurFeuilles,
-      epaisseur_feuilles: epaisseurFeuilles,
       turgescence,
       brulures,
       necroses,
       deformations,
-      mildiou_presence: mildiouPresence,
-      mildiou_intensite: mildiouIntensite,
-      pression_mildiou: pressionMildiou,
       taille_grappes: tailleGrappes,
       homogeneite_grappes: homogeneiteGrappes,
     } as Record<string, unknown>;
@@ -228,18 +166,15 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
     const errors = validateObservation(obsPartial);
     if (errors.length > 0) {
       setValidationErrors(errors);
-      // Scroll vers la première erreur
       const firstField = errors[0].champ;
       const el = document.querySelector(`[data-field="${firstField}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       setToast({ message: "Corrige les erreurs avant de sauvegarder", type: "error", visible: true });
       return;
     }
     setValidationErrors([]);
-
     setSaving(true);
+
     const obsData = {
       parcelle_id: parcelleId,
       rang,
@@ -247,48 +182,44 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
       date,
       heure,
       mois: new Date(date).toLocaleString("fr-FR", { month: "long" }),
-      meteo: meteo || null,
-      temperature,
-      humidite,
-      vent: vent || null,
-      pluie_recente: pluieRecente === "Oui" ? true : pluieRecente === "Non" ? false : null,
-      derniere_pluie: dernierePluie || null,
-      humidite_sol: humiditeSol || null,
-      volume_applique_l: volumeApplique,
-      ph_surnageant: phSurnageant,
-      surnageant_l: surnageantL,
-      eau_l: eauL,
-      cuivre: cuivre === "Oui" ? true : cuivre === "Non" ? false : null,
-      date_surnageant: dateSurnageant || null,
-      date_cuivre: dateCuivre || null,
+      stade_bbch: stadeBbch || null,
+      repetition,
       vigueur,
       croissance,
       homogeneite,
       couleur_feuilles: couleurFeuilles,
-      epaisseur_feuilles: epaisseurFeuilles,
       turgescence,
       brulures,
       necroses,
       deformations,
-      mildiou_presence: mildiouPresence,
-      mildiou_intensite: mildiouIntensite,
-      localisation_mildiou: localisationMildiou || null,
-      progression: progression || null,
-      pression_mildiou: pressionMildiou,
+      escargots: escargots || null,
+      acariens: acariens || null,
       nb_grappes_par_cep: nbGrappes,
       taille_grappes: tailleGrappes,
       homogeneite_grappes: homogeneiteGrappes,
       nombre_grappes: nombreGrappes,
       poids_moyen_grappe: poidsMoyenGrappe,
+      poids_100_baies: poids100Baies,
       rendement_estime: rendementEstime,
       rendement_reel: rendementReel,
-      score_plante: calcScorePlante({ vigueur, croissance, homogeneite, couleur_feuilles: couleurFeuilles, epaisseur_feuilles: epaisseurFeuilles, turgescence } as any),
-      score_sanitaire: calcScoreSanitaire({ brulures, necroses, deformations, mildiou_presence: mildiouPresence, pression_mildiou: pressionMildiou } as any),
       commentaires: commentaires || null,
     };
 
     const { data, error } = await supabase.from("observations").insert(obsData).select("id").single();
 
+    // Insérer les maladies dans la table séparée
+    if (!error && data && maladies.length > 0) {
+      const maladiesData = maladies.map(m => ({
+        observation_id: data.id,
+        type: m.type,
+        zone: m.zone,
+        nb_feuilles_atteintes: m.nb_feuilles_atteintes,
+        surface_atteinte_pct: m.surface_atteinte_pct,
+      }));
+      await supabase.from("maladies_observations").insert(maladiesData);
+    }
+
+    // Upload photos
     if (!error && data && photos.length > 0) {
       await uploadPhotos(photos, data.id);
     }
@@ -307,89 +238,71 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
     <form onSubmit={handleSubmit} className="space-y-3">
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
 
-      {/* Identification */}
+      {/* ===== 1. Identification ===== */}
       <Section title="Identification" icon="📍" defaultOpen={true}>
-        <SelectField label="Vignoble" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); }} options={vignoblesList.map(v => v.nom)} />
+        <SelectField label="Site" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); }} options={vignoblesList.map(v => v.nom)} />
         {parcelles.length > 0 && (
           <div data-field="parcelle_id">
             <SelectField label="Parcelle" value={parcelleId} onChange={(v) => { setParcelleId(v); clearError("parcelle_id"); }} options={parcelles.map(p => ({ value: p.id, label: p.nom }))} />
             <ValidationMessage message={errorFor("parcelle_id")} />
           </div>
         )}
-        {/* parcelle name now shown in select */}
         <div data-field="rang">
-          <SelectField label="Rang" value={rang ? String(rang) : ""} onChange={(v) => { handleRangChange(Number(v)); clearError("rang"); }} options={rangs.map(String)} />
+          <SelectField label="Modalité (rang)" value={rang ? String(rang) : ""} onChange={(v) => { setRang(Number(v)); clearError("rang"); }} options={rangs.map(String)} />
           <ValidationMessage message={errorFor("rang")} />
         </div>
         {modalite && (
-          <div className="bg-[#2d5016]/5 rounded-lg px-3 py-2 text-sm">
-            <span className="font-medium text-[#2d5016]">Modalité :</span> {modalite}
+          <div className="bg-emerald-50 rounded-xl px-3 py-2 text-sm">
+            <span className="font-medium text-emerald-700">Modalité :</span> {modalite}
             {modaliteRef && <span className="text-gray-500 ml-2">— {modaliteRef.description}</span>}
           </div>
         )}
+        <NumberField label="Répétition (placette)" value={repetition} onChange={setRepetition} min={1} max={10} />
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1" data-field="date">
             <label className="text-sm font-medium text-gray-700">Date</label>
-            <input type="date" value={date} onChange={(e) => { setDate(e.target.value); clearError("date"); }} className={`border rounded-lg px-3 py-2 text-sm ${errorFor("date") ? "border-red-400" : "border-gray-200"}`} />
+            <input type="date" value={date} onChange={(e) => { setDate(e.target.value); clearError("date"); }} className={`border rounded-xl px-3 py-2.5 text-sm ${errorFor("date") ? "border-red-400" : "border-gray-200"}`} />
             <ValidationMessage message={errorFor("date")} />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Heure</label>
-            <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
           </div>
         </div>
       </Section>
 
-      {/* Météo */}
-      <Section title="Météo" icon="🌤️">
-        <SelectField label="Météo" value={meteo} onChange={setMeteo} options={METEO_OPTIONS} />
-        <div className="grid grid-cols-2 gap-3">
-          <div data-field="temperature">
-            <NumberField label="Température" value={temperature} onChange={(v) => { setTemperature(v); clearError("temperature"); }} unit="°C" step={0.5} />
-            <ValidationMessage message={errorFor("temperature")} />
-          </div>
-          <div data-field="humidite">
-            <NumberField label="Humidité" value={humidite} onChange={(v) => { setHumidite(v); clearError("humidite"); }} unit="%" />
-            <ValidationMessage message={errorFor("humidite")} />
-          </div>
-        </div>
-        <SelectField label="Vent" value={vent} onChange={setVent} options={VENT_OPTIONS} />
-        <SelectField label="Pluie récente" value={pluieRecente} onChange={setPluieRecente} options={["Oui", "Non"]} />
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700">Dernière pluie</label>
-          <input type="date" value={dernierePluie} onChange={(e) => setDernierePluie(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div className="flex items-center gap-1">
-          <SelectField label="Humidité sol" value={humiditeSol} onChange={setHumiditeSol} options={HUMIDITE_SOL_OPTIONS} />
-          <HelpIcon codeIndicateur={INDICATEUR_MAPPING.humidite_sol} />
-        </div>
-      </Section>
-
-      {/* Dernière analyse labo */}
-      <DerniereAnalyseLaboCard parcelleId={parcelleId} />
-
-      {/* Traitement */}
-      <Section title="Traitement appliqué" icon="💧">
-        <div className="grid grid-cols-3 gap-3">
-          <NumberField label="Surnageant" value={surnageantL} onChange={setSurnageantL} unit="L" step={0.5} />
-          <NumberField label="Eau" value={eauL} onChange={setEauL} unit="L" step={0.5} />
-          <NumberField label="Volume total" value={volumeApplique} onChange={setVolumeApplique} unit="L" step={0.5} />
-        </div>
-        <NumberField label="pH surnageant" value={phSurnageant} onChange={setPhSurnageant} step={0.1} />
-        <SelectField label="Cuivre" value={cuivre} onChange={setCuivre} options={["Oui", "Non"]} />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Date surnageant</label>
-            <input type="date" value={dateSurnageant} onChange={(e) => setDateSurnageant(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Date cuivre</label>
-            <input type="date" value={dateCuivre} onChange={(e) => setDateCuivre(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-          </div>
+      {/* ===== 2. Stade BBCH ===== */}
+      <Section title="Stade phénologique (BBCH)" icon="🌱">
+        <p className="text-xs text-gray-400 mb-2">Sélectionnez le stade de développement de la vigne</p>
+        <div className="grid grid-cols-1 gap-2">
+          {STADES_BBCH.map((s) => (
+            <button
+              key={s.code}
+              type="button"
+              onClick={() => setStadeBbch(s.code)}
+              className={`text-left px-4 py-3 rounded-xl border transition-all ${
+                stadeBbch === s.code
+                  ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20"
+                  : "border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                  stadeBbch === s.code ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-600"
+                }`}>
+                  {s.code}
+                </span>
+                <div>
+                  <div className="text-sm font-medium text-gray-800">{s.label}</div>
+                  <div className="text-xs text-gray-500">{s.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
       </Section>
 
-      {/* État plante */}
+      {/* ===== 3. État de la plante ===== */}
       <Section title="État de la plante" icon="🌿">
         <div className="flex items-center gap-1" data-field="vigueur">
           <SliderNote label="Vigueur" value={vigueur} onChange={(v) => { setVigueur(v); clearError("vigueur"); }} />
@@ -402,13 +315,11 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
         <ValidationMessage message={errorFor("homogeneite")} />
         <SliderNote label="Couleur feuilles" value={couleurFeuilles} onChange={(v) => { setCouleurFeuilles(v); clearError("couleur_feuilles"); }} />
         <ValidationMessage message={errorFor("couleur_feuilles")} />
-        <SliderNote label="Épaisseur feuilles" value={epaisseurFeuilles} onChange={(v) => { setEpaisseurFeuilles(v); clearError("epaisseur_feuilles"); }} />
-        <ValidationMessage message={errorFor("epaisseur_feuilles")} />
         <SliderNote label="Turgescence" value={turgescence} onChange={(v) => { setTurgescence(v); clearError("turgescence"); }} />
         <ValidationMessage message={errorFor("turgescence")} />
       </Section>
 
-      {/* Symptômes */}
+      {/* ===== 4. Symptômes négatifs + ravageurs ===== */}
       <Section title="Symptômes négatifs" icon="⚠️">
         <p className="text-xs text-gray-400">0 = aucun symptôme, 5 = très sévère</p>
         <SliderNote label="Brûlures" value={brulures} onChange={(v) => { setBrulures(v); clearError("brulures"); }} />
@@ -417,29 +328,104 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
         <ValidationMessage message={errorFor("necroses")} />
         <SliderNote label="Déformations" value={deformations} onChange={(v) => { setDeformations(v); clearError("deformations"); }} />
         <ValidationMessage message={errorFor("deformations")} />
+
+        <div className="border-t border-gray-100 pt-3 mt-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Ravageurs</p>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={escargots}
+                onChange={(e) => setEscargots(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-sm">🐌 Escargots</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acariens}
+                onChange={(e) => setAcariens(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-sm">🕷️ Acariens</span>
+            </label>
+          </div>
+        </div>
       </Section>
 
-      {/* Maladies */}
-      <Section title="Maladies" icon="🦠">
-        <div className="flex items-center gap-1" data-field="mildiou_presence">
-          <SliderNote label="Mildiou présence" value={mildiouPresence} onChange={(v) => { setMildiouPresence(v); clearError("mildiou_presence"); }} />
-          <HelpIcon codeIndicateur={INDICATEUR_MAPPING.mildiou_presence} />
-        </div>
-        <ValidationMessage message={errorFor("mildiou_presence")} />
-        <div className="flex items-center gap-1" data-field="mildiou_intensite">
-          <NumberField label="Mildiou intensité" value={mildiouIntensite} onChange={(v) => { setMildiouIntensite(v); clearError("mildiou_intensite"); }} unit="%" max={100} />
-          <HelpIcon codeIndicateur={INDICATEUR_MAPPING.mildiou_intensite} />
-        </div>
-        <ValidationMessage message={errorFor("mildiou_intensite")} />
-        <SelectField label="Localisation" value={localisationMildiou} onChange={setLocalisationMildiou} options={LOCALISATION_OPTIONS} />
-        <SelectField label="Progression" value={progression} onChange={setProgression} options={PROGRESSION_OPTIONS} />
-        <div data-field="pression_mildiou">
-          <SliderNote label="Pression mildiou" value={pressionMildiou} onChange={(v) => { setPressionMildiou(v); clearError("pression_mildiou"); }} max={3} />
-          <ValidationMessage message={errorFor("pression_mildiou")} />
-        </div>
+      {/* ===== 5. Maladies v2 (structure Wilfried — 20 feuilles) ===== */}
+      <Section title="Maladies (sur 20 feuilles)" icon="🦠">
+        <p className="text-xs text-gray-400 mb-2">
+          Comptez sur {NB_FEUILLES_ECHANTILLON} feuilles. La fréquence (%) est calculée automatiquement.
+        </p>
+
+        {maladies.map((m, i) => (
+          <div key={i} className="bg-gray-50 rounded-xl p-4 space-y-3 relative">
+            <button
+              type="button"
+              onClick={() => removeMaladie(i)}
+              className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-lg"
+              aria-label="Supprimer cette maladie"
+            >
+              ✕
+            </button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <SelectField
+                label="Type"
+                value={m.type}
+                onChange={(v) => updateMaladie(i, "type", v)}
+                options={TYPES_MALADIE.map(t => ({ value: t.code, label: t.label }))}
+              />
+              <SelectField
+                label="Zone"
+                value={m.zone}
+                onChange={(v) => updateMaladie(i, "zone", v)}
+                options={ZONES_MALADIE.map(z => ({ value: z.code, label: z.label }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField
+                label={`Feuilles atteintes (/${NB_FEUILLES_ECHANTILLON})`}
+                value={m.nb_feuilles_atteintes}
+                onChange={(v) => updateMaladie(i, "nb_feuilles_atteintes", v ?? 0)}
+                min={0}
+                max={NB_FEUILLES_ECHANTILLON}
+              />
+              <NumberField
+                label="Surface atteinte (%)"
+                value={m.surface_atteinte_pct}
+                onChange={(v) => updateMaladie(i, "surface_atteinte_pct", v ?? 0)}
+                min={0}
+                max={100}
+                unit="%"
+              />
+            </div>
+
+            {/* Résultats auto-calculés */}
+            <div className="flex gap-4 text-xs">
+              <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">
+                Fréquence : <strong>{((m.nb_feuilles_atteintes / NB_FEUILLES_ECHANTILLON) * 100).toFixed(1)}%</strong>
+              </span>
+              <span className="bg-red-50 text-red-700 px-2 py-1 rounded-lg">
+                Intensité : <strong>{((m.nb_feuilles_atteintes / NB_FEUILLES_ECHANTILLON) * m.surface_atteinte_pct / 100 * 100).toFixed(1)}%</strong>
+              </span>
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addMaladie}
+          className="w-full border-2 border-dashed border-gray-300 rounded-xl py-3 text-sm text-gray-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+        >
+          + Ajouter une maladie
+        </button>
       </Section>
 
-      {/* Grappes */}
+      {/* ===== 6. Grappes ===== */}
       <Section title="Grappes" icon="🍇">
         <NumberField label="Nb grappes / cep" value={nbGrappes} onChange={setNbGrappes} />
         <SliderNote label="Taille grappes" value={tailleGrappes} onChange={(v) => { setTailleGrappes(v); clearError("taille_grappes"); }} />
@@ -448,8 +434,9 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
         <ValidationMessage message={errorFor("homogeneite_grappes")} />
       </Section>
 
-      {/* Rendement */}
-      <Section title="Rendement" icon="📈">
+      {/* ===== 7. Rendement (10 ceps marqués) ===== */}
+      <Section title="Rendement (10 ceps)" icon="📈">
+        <p className="text-xs text-gray-400 mb-2">Mesures sur les 10 ceps marqués de la placette</p>
         <RendementFields
           nombre_grappes={nombreGrappes}
           poids_moyen_grappe={poidsMoyenGrappe}
@@ -460,59 +447,39 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
           onChangeRendementEstime={setRendementEstime}
           onChangeRendementReel={setRendementReel}
         />
+        <NumberField label="Poids 100 baies" value={poids100Baies} onChange={setPoids100Baies} unit="g" step={0.1} />
       </Section>
 
-      {/* Photos */}
+      {/* ===== 8. Photos ===== */}
       <Section title="Photos" icon="📸">
         <PhotoUpload photos={photos} onPhotosChange={setPhotos} />
       </Section>
 
-      {/* Commentaires */}
+      {/* ===== 9. Commentaires ===== */}
       <Section title="Commentaires" icon="💬">
         <textarea
           value={commentaires}
           onChange={(e) => setCommentaires(e.target.value)}
           rows={3}
           placeholder="Notes libres, observations particulières..."
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d5016]/30"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
         />
       </Section>
 
-      {/* Scores calculés */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3">
-        <div className="text-sm font-medium mb-2">📊 Scores calculés</div>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Score plante :</span>{" "}
-            <span className="font-bold text-[#2d5016]">
-              {calcScorePlante({ vigueur, croissance, homogeneite, couleur_feuilles: couleurFeuilles, epaisseur_feuilles: epaisseurFeuilles, turgescence } as any) ?? "—"}
-            </span>
-            <span className="text-gray-400"> /5</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Score sanitaire :</span>{" "}
-            <span className="font-bold text-[#2d5016]">
-              {calcScoreSanitaire({ brulures, necroses, deformations, mildiou_presence: mildiouPresence, pression_mildiou: pressionMildiou } as any) ?? "—"}
-            </span>
-            <span className="text-gray-400"> /5</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Score rendement :</span>{" "}
-            <span className="font-bold text-[#2d5016]">
-              {calcScoreRendement({ rendement_estime: rendementEstime, rendement_reel: rendementReel }) ?? "—"}
-            </span>
-            <span className="text-gray-400"> /5</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Submit */}
+      {/* ===== Submit ===== */}
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-[#2d5016] text-white rounded-xl py-4 font-semibold text-lg shadow-md hover:bg-[#4a7c28] disabled:opacity-50 transition-colors"
+        className="w-full btn-primary"
       >
-        {saving ? "Enregistrement..." : "💾 Sauvegarder l'observation"}
+        {saving ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Enregistrement...
+          </span>
+        ) : (
+          "💾 Sauvegarder l'observation"
+        )}
       </button>
     </form>
   );

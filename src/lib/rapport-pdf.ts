@@ -15,7 +15,6 @@ export interface ObservationResume {
   rang: number;
   modalite: string;
   vigueur: number | null;
-  mildiou_presence: number | null;
   score_plante: number | null;
   score_sanitaire: number | null;
 }
@@ -79,7 +78,6 @@ interface ObservationInput {
   rang: number;
   modalite: string;
   vigueur: number | null;
-  mildiou_presence: number | null;
   score_plante: number | null;
   score_sanitaire: number | null;
 }
@@ -142,7 +140,7 @@ export function assemblerDonneesRapport(
   // Compute average scores from observations
   const scorePlante = moyenneNonNull(observations.map((o) => o.score_plante));
   const scoreSanitaire = moyenneNonNull(observations.map((o) => o.score_sanitaire));
-  const scoreMaladie = moyenneNonNull(observations.map((o) => o.mildiou_presence));
+  const scoreMaladie = moyenneNonNull(observations.map((o) => o.vigueur));
 
   // Compute sol score from analyses
   const scoreSol = moyenneNonNull(analyses_sol.map((a) => a.score_sante_sol));
@@ -182,7 +180,6 @@ export function assemblerDonneesRapport(
       rang: o.rang,
       modalite: o.modalite,
       vigueur: o.vigueur,
-      mildiou_presence: o.mildiou_presence,
       score_plante: o.score_plante,
       score_sanitaire: o.score_sanitaire,
     })),
@@ -372,11 +369,10 @@ export async function genererRapportPDF(
   if (rapportData.observations.length > 0) {
     drawTable(
       `Observations (${rapportData.observations.length})`,
-      ["Date", "Rang", "Modalité", "Vigueur", "Mildiou", "Sc.Plante", "Sc.Sanit."],
+      ["Date", "Rang", "Modalité", "Vigueur", "Sc.Plante", "Sc.Sanit."],
       rapportData.observations.map((o) => [
         o.date, String(o.rang), o.modalite,
         o.vigueur != null ? String(o.vigueur) : "-",
-        o.mildiou_presence != null ? String(o.mildiou_presence) : "-",
         o.score_plante != null ? String(o.score_plante) : "-",
         o.score_sanitaire != null ? String(o.score_sanitaire) : "-",
       ])

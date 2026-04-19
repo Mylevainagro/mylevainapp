@@ -1,33 +1,28 @@
-import type { Observation, ValidationError, Note05, Note03 } from '@/lib/types';
+import type { Observation, ValidationError, Note05 } from '@/lib/types';
 import { validateObservation } from '@/lib/validation';
 
 /**
- * Input pour un rang dans un lot batch.
- * Contient les champs spécifiques au rang (indicateurs, commentaires).
+ * Input pour un rang dans un lot batch v2.
+ * Simplifié : vigueur + commentaires (maladies saisies séparément).
  */
 export interface BatchRangInput {
   rang: number;
   modalite: string;
   vigueur: Note05 | null;
-  mildiou_presence: Note05 | null;
-  mildiou_intensite: number | null;
-  pression_mildiou: Note03 | null;
   commentaires: string | null;
 }
 
 /**
- * Champs partagés entre tous les rangs d'un lot.
+ * Champs partagés entre tous les rangs d'un lot v2.
+ * Supprimé : météo (plus dans observations).
  */
 export interface SharedFields {
   parcelle_id: string;
   date: string;
   heure: string;
   mois: string;
-  meteo: string | null;
-  temperature: number | null;
-  humidite: number | null;
-  vent: string | null;
-  humidite_sol: string | null;
+  stade_bbch: string | null;
+  repetition: number | null;
 }
 
 /**
@@ -45,7 +40,6 @@ export type ObservationInsert = Omit<Observation, 'id' | 'created_at'>;
 
 /**
  * Valide chaque rang individuellement.
- * Retourne le nombre de rangs valides et les erreurs par rang invalide.
  */
 export function validateBatch(rangs: BatchRangInput[], shared: SharedFields): BatchResult {
   const errors: { rang: number; errors: ValidationError[] }[] = [];
@@ -56,12 +50,7 @@ export function validateBatch(rangs: BatchRangInput[], shared: SharedFields): Ba
       parcelle_id: shared.parcelle_id,
       date: shared.date,
       rang: rang.rang,
-      temperature: shared.temperature,
-      humidite: shared.humidite,
       vigueur: rang.vigueur,
-      mildiou_presence: rang.mildiou_presence,
-      mildiou_intensite: rang.mildiou_intensite,
-      pression_mildiou: rang.pression_mildiou,
     };
 
     const rangErrors = validateObservation(obsData);
@@ -77,9 +66,7 @@ export function validateBatch(rangs: BatchRangInput[], shared: SharedFields): Ba
 }
 
 /**
- * Prépare les enregistrements pour insertion Supabase.
- * Fusionne les champs partagés avec les champs spécifiques de chaque rang valide.
- * Filtre les rangs invalides (ceux qui ont des erreurs de validation).
+ * Prépare les enregistrements pour insertion Supabase v2.
  */
 export function prepareBatchRecords(
   rangs: BatchRangInput[],
@@ -97,15 +84,9 @@ export function prepareBatchRecords(
       date: shared.date,
       heure: shared.heure,
       mois: shared.mois,
-      meteo: shared.meteo as Observation['meteo'],
-      temperature: shared.temperature,
-      humidite: shared.humidite,
-      vent: shared.vent as Observation['vent'],
-      humidite_sol: shared.humidite_sol as Observation['humidite_sol'],
+      stade_bbch: shared.stade_bbch,
+      repetition: shared.repetition,
       vigueur: r.vigueur,
-      mildiou_presence: r.mildiou_presence,
-      mildiou_intensite: r.mildiou_intensite,
-      pression_mildiou: r.pression_mildiou,
       commentaires: r.commentaires,
     }));
 }
