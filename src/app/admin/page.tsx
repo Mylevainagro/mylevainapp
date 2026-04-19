@@ -828,8 +828,11 @@ export default function AdminPage() {
           <option value="">Sélectionner...</option>
           {parcelles.map(p => <option key={p.id} value={p.id}>{p.nom} ({vignobles.find(v => v.id === p.vignoble_id)?.nom})</option>)}
         </select>
-        <label className="text-sm font-medium">Modalité (code)</label>
-        <input value={modal?.data?.modalite_id || ""} onChange={e => updateModal("modalite_id", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono" placeholder="ex: M0, M1, M2" />
+        <label className="text-sm font-medium">Modalité</label>
+        <select value={modal?.data?.modalite_id || ""} onChange={e => updateModal("modalite_id", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="">Aucune (toutes)</option>
+          {modalitesLevain.map(m => <option key={m.id} value={m.code}>{m.code} — {m.label}</option>)}
+        </select>
         <label className="text-sm font-medium">Nombre de ceps</label>
         <input type="number" value={modal?.data?.nb_ceps || 7} onChange={e => updateModal("nb_ceps", Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
         <label className="text-sm font-medium">Position dans le rang</label>
