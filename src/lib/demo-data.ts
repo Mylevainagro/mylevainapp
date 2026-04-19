@@ -153,6 +153,8 @@ function genTraitements(): Traitement[] {
         surface_ha: null,
         modalite_globale: null,
         heure: '08:00',
+        latitude: 44.8378,
+        longitude: -0.5792,
       });
     }
   }

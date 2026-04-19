@@ -181,6 +181,10 @@ export interface Traitement {
   surface_ha: number | null;
   modalite_globale: string | null;
   heure: string | null;
+
+  // GPS auto
+  latitude: number | null;
+  longitude: number | null;
 }
 
 // ---- Traitement rang (détail par rang) ----

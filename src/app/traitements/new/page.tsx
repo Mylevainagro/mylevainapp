@@ -63,6 +63,30 @@ export default function NewTraitementPage() {
   const [stade, setStade] = useState("");
   const [operateur, setOperateur] = useState("");
 
+  // GPS auto
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"loading" | "ok" | "error" | "idle">("idle");
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGpsStatus("error");
+      return;
+    }
+    setGpsStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLatitude(Math.round(pos.coords.latitude * 1000000) / 1000000);
+        setLongitude(Math.round(pos.coords.longitude * 1000000) / 1000000);
+        setGpsStatus("ok");
+      },
+      () => {
+        setGpsStatus("error");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
   // Étape 2 — Protocole
   const [protocoleId, setProtocoleId] = useState("");
   const [modeLibre, setModeLibre] = useState(false);
@@ -174,6 +198,8 @@ export default function NewTraitementPage() {
       surface_ha: mode === "surface" ? surfaceHa : null,
       modalite_globale: mode === "surface" ? modaliteGlobale : null,
       heure: heure || null,
+      latitude,
+      longitude,
     }).select("id").single();
 
     if (traitError || !traitData) {
@@ -234,6 +260,28 @@ export default function NewTraitementPage() {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Opérateur</label>
             <input type="text" value={operateur} onChange={(e) => setOperateur(e.target.value)} placeholder="Nom" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
+          </div>
+
+          {/* GPS auto */}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-sm">📍</span>
+            {gpsStatus === "loading" && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="w-3 h-3 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin" />
+                Localisation en cours…
+              </span>
+            )}
+            {gpsStatus === "ok" && (
+              <span className="text-xs text-emerald-600 font-medium">
+                GPS : {latitude}, {longitude}
+              </span>
+            )}
+            {gpsStatus === "error" && (
+              <span className="text-xs text-amber-600">GPS indisponible — position non enregistrée</span>
+            )}
+            {gpsStatus === "idle" && (
+              <span className="text-xs text-gray-400">En attente du GPS…</span>
+            )}
           </div>
         </Section>
 
