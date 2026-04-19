@@ -74,15 +74,15 @@ export default function HomePage() {
     async function load() {
       // Load sites + vignobles
       const [sitesRes, vigRes] = await Promise.all([
-        supabase.from("sites").select("id, nom, type_site, localisation").eq("actif", true).order("nom"),
+        supabase.from("sites").select("id, nom, type_site, type_exploitation, localisation, adresse").order("nom"),
         supabase.from("vignobles").select("id, nom, localisation, appellation").order("nom"),
       ]);
 
       // Load parcelles to map parcelle_id → site/vignoble
-      const { data: parcData } = await supabase.from("parcelles").select("id, vignoble_id");
+      const { data: parcData } = await supabase.from("parcelles").select("id, vignoble_id, site_id");
       const parcelleToSite: Record<string, string> = {};
-      for (const p of parcData ?? []) {
-        parcelleToSite[p.id] = p.vignoble_id;
+      for (const p of (parcData ?? []) as { id: string; vignoble_id: string; site_id: string | null }[]) {
+        parcelleToSite[p.id] = p.site_id || p.vignoble_id;
       }
 
       // Load counts + last dates
@@ -106,9 +106,10 @@ export default function HomePage() {
 
       const items: SiteDisplay[] = [];
       for (const s of sitesRes.data ?? []) {
+        const typeKey = s.type_exploitation || s.type_site || "";
         items.push({
-          id: s.id, nom: s.nom, localisation: s.localisation,
-          type: s.type_site, emoji: TYPE_EMOJI[s.type_site ?? ""] ?? "📍",
+          id: s.id, nom: s.nom, localisation: s.localisation || s.adresse,
+          type: typeKey, emoji: TYPE_EMOJI[typeKey] ?? "📍",
           derniere_observation: lastObs[s.id] ?? null,
           dernier_traitement: lastTrait[s.id] ?? null,
         });
