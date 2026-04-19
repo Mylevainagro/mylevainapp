@@ -174,6 +174,24 @@ export interface Traitement {
   ph_eau: number | null;
   ph_bouillie: number | null;
   origine_eau: string | null;
+
+  // Multi-rangs v3
+  mode: 'rang' | 'surface' | null;
+  nb_rangs: number | null;
+  surface_ha: number | null;
+  modalite_globale: string | null;
+  heure: string | null;
+}
+
+// ---- Traitement rang (détail par rang) ----
+
+export interface TraitementRang {
+  id: string;
+  traitement_id: string;
+  rang: string; // "R1", "R2"…
+  modalite_id: string; // code modalité
+  dose: string | null;
+  commentaire: string | null;
 }
 
 export interface AnalyseSol {

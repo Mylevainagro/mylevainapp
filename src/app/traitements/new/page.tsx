@@ -18,32 +18,36 @@ interface VignobleItem { id: string; nom: string; }
 interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
 interface ProtocoleOption { id: string; code: string; label: string; }
 interface ModaliteLevainOption { id: string; code: string; label: string; }
-interface ProduitOption { id: string; code: string; label: string; }
+
+interface RangEntry {
+  rang: string;
+  modalite_id: string;
+  dose: string;
+  commentaire: string;
+}
 
 export default function NewTraitementPage() {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
+  const now = new Date().toTimeString().slice(0, 5);
 
   const [vignoblesList, setVignoblesList] = useState<VignobleItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
   const [protocoleOptions, setProtocoleOptions] = useState<ProtocoleOption[]>([]);
-  const [modaliteLevainOptions, setModaliteLevainOptions] = useState<ModaliteLevainOption[]>([]);
-  const [produitOptions, setProduitOptions] = useState<ProduitOption[]>([]);
+  const [modaliteOptions, setModaliteOptions] = useState<ModaliteLevainOption[]>([]);
 
   useEffect(() => {
     async function load() {
-      const [v, p, proto, modLev, prod] = await Promise.all([
+      const [v, p, proto, modLev] = await Promise.all([
         supabase.from("vignobles").select("id, nom").order("nom"),
         supabase.from("parcelles").select("id, vignoble_id, nom").order("nom"),
         supabase.from("protocoles").select("id, code, label").eq("actif", true).order("ordre"),
         supabase.from("modalites_levain").select("id, code, label").eq("actif", true).order("ordre"),
-        supabase.from("produits").select("id, code, label").eq("actif", true).order("ordre"),
       ]);
       if (v.data) setVignoblesList(v.data);
       if (p.data) setParcellesList(p.data);
       if (proto.data) setProtocoleOptions(proto.data);
-      if (modLev.data) setModaliteLevainOptions(modLev.data);
-      if (prod.data) setProduitOptions(prod.data);
+      if (modLev.data) setModaliteOptions(modLev.data);
     }
     load();
   }, []);
@@ -52,45 +56,50 @@ export default function NewTraitementPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({ message: "", type: "success", visible: false });
   const hideToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
 
-  // 1. Identification
+  // Étape 1 — Identification
   const [vignoble, setVignoble] = useState("");
   const [parcelleId, setParcelleId] = useState("");
-  const [protocoleId, setProtocoleId] = useState("");
   const [date, setDate] = useState(today);
   const [stade, setStade] = useState("");
   const [operateur, setOperateur] = useState("");
 
-  // 2. Zone traitée
-  const [zoneType, setZoneType] = useState<"rang" | "surface">("rang");
-  const [zoneRang, setZoneRang] = useState("");
-  const [zoneSurfaceM2, setZoneSurfaceM2] = useState<number | null>(null);
+  // Étape 2 — Protocole
+  const [protocoleId, setProtocoleId] = useState("");
+  const [modeLibre, setModeLibre] = useState(false);
 
-  // 3. Modalité
-  const [modaliteLevainId, setModaliteLevainId] = useState("");
-  const [rang, setRang] = useState<number>(0);
+  // Étape 3 — Type de zone
+  const [mode, setMode] = useState<"rang" | "surface">("rang");
 
-  // 4. Produit & Application
-  const [produitLevainId, setProduitLevainId] = useState("");
-  const [dose, setDose] = useState("");
+  // Étape 4 — Nombre de rangs (mode rang)
+  const [nbRangs, setNbRangs] = useState<number>(7);
+
+  // Étape 5+6 — Rangs générés avec modalités
+  const [rangs, setRangs] = useState<RangEntry[]>([]);
+
+  // Mode surface
+  const [surfaceHa, setSurfaceHa] = useState<number | null>(null);
+  const [modaliteGlobale, setModaliteGlobale] = useState("");
+
+  // Étape 7 — Paramètres globaux
   const [volumeBouillie, setVolumeBouillie] = useState<number | null>(null);
   const [phEau, setPhEau] = useState<number | null>(null);
   const [phBouillie, setPhBouillie] = useState<number | null>(null);
   const [origineEau, setOrigineEau] = useState("");
 
-  // 5. Conditions météo
+  // Étape 8 — Conditions météo
+  const [heure, setHeure] = useState(now);
   const [temperature, setTemperature] = useState<number | null>(null);
   const [humidite, setHumidite] = useState<number | null>(null);
   const [vent, setVent] = useState("");
   const [couvert, setCouvert] = useState("");
-  const [conditionsMeteo, setConditionsMeteo] = useState("");
 
-  // 6. Type application
+  // Étape 9 — Type application
   const [typeApplication, setTypeApplication] = useState("");
 
-  // 7. Cas spécial
+  // Étape 10 — Options
   const [prelevementSol, setPrelevementSol] = useState(false);
 
-  // 8. Notes
+  // Étape 11 — Notes
   const [notes, setNotes] = useState("");
 
   const parcelles = vignoble ? parcellesList.filter(p => {
@@ -98,35 +107,61 @@ export default function NewTraitementPage() {
     return v && p.vignoble_id === v.id;
   }) : [];
 
+  // Générer les rangs quand nbRangs change
+  function genererRangs() {
+    const newRangs: RangEntry[] = [];
+    for (let i = 1; i <= nbRangs; i++) {
+      const existing = rangs.find(r => r.rang === `R${i}`);
+      newRangs.push(existing ?? { rang: `R${i}`, modalite_id: "", dose: "", commentaire: "" });
+    }
+    setRangs(newRangs);
+  }
+
+  useEffect(() => {
+    if (mode === "rang" && nbRangs > 0) {
+      genererRangs();
+    }
+  }, [nbRangs, mode]);
+
+  function updateRang(index: number, field: keyof RangEntry, value: string) {
+    setRangs(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!parcelleId || !date) {
       setToast({ message: "Remplis au moins : parcelle et date", type: "error", visible: true });
       return;
     }
+    if (mode === "rang" && rangs.some(r => !r.modalite_id)) {
+      setToast({ message: "Chaque rang doit avoir une modalité", type: "error", visible: true });
+      return;
+    }
+    if (mode === "surface" && !modaliteGlobale) {
+      setToast({ message: "Sélectionne une modalité pour la surface", type: "error", visible: true });
+      return;
+    }
+
     setSaving(true);
-    const { error } = await supabase.from("traitements").insert({
+
+    // 1. Insérer le traitement principal
+    const { data: traitData, error: traitError } = await supabase.from("traitements").insert({
       parcelle_id: parcelleId,
-      rang,
-      modalite: "",
+      rang: mode === "rang" ? nbRangs : 0,
+      modalite: mode === "surface" ? modaliteGlobale : "",
       date,
       produit: "",
-      dose: dose || null,
+      dose: null,
       methode_application: typeApplication || null,
       temperature,
       humidite,
-      conditions_meteo: conditionsMeteo || null,
+      conditions_meteo: couvert || null,
       operateur: operateur || null,
       notes: notes || null,
       campagne: new Date().getFullYear().toString(),
-      protocole_id: protocoleId || null,
-      modalite_levain_id: modaliteLevainId || null,
-      produit_levain_id: produitLevainId || null,
-      // Nouveaux champs v2
+      protocole_id: (!modeLibre && protocoleId) ? protocoleId : null,
       stade: stade || null,
-      zone_traitee_type: zoneType,
-      zone_traitee_rang: zoneType === "rang" ? (zoneRang || null) : null,
-      zone_traitee_surface_m2: zoneType === "surface" ? zoneSurfaceM2 : null,
+      zone_traitee_type: mode,
       type_application: typeApplication || null,
       prelevement_sol: prelevementSol,
       couvert: couvert || null,
@@ -134,14 +169,39 @@ export default function NewTraitementPage() {
       ph_eau: phEau,
       ph_bouillie: phBouillie,
       origine_eau: origineEau || null,
-    });
-    setSaving(false);
-    if (error) {
-      setToast({ message: "Erreur : " + error.message, type: "error", visible: true });
-    } else {
-      setToast({ message: "Traitement enregistré ✓", type: "success", visible: true });
-      setTimeout(() => router.push("/traitements"), 1000);
+      mode,
+      nb_rangs: mode === "rang" ? nbRangs : null,
+      surface_ha: mode === "surface" ? surfaceHa : null,
+      modalite_globale: mode === "surface" ? modaliteGlobale : null,
+      heure: heure || null,
+    }).select("id").single();
+
+    if (traitError || !traitData) {
+      setSaving(false);
+      setToast({ message: "Erreur : " + (traitError?.message ?? "inconnue"), type: "error", visible: true });
+      return;
     }
+
+    // 2. Insérer les rangs (mode rang uniquement)
+    if (mode === "rang" && rangs.length > 0) {
+      const rangRecords = rangs.map(r => ({
+        traitement_id: traitData.id,
+        rang: r.rang,
+        modalite_id: r.modalite_id,
+        dose: r.dose || null,
+        commentaire: r.commentaire || null,
+      }));
+      const { error: rangError } = await supabase.from("traitement_rangs").insert(rangRecords);
+      if (rangError) {
+        setSaving(false);
+        setToast({ message: "Traitement créé mais erreur rangs : " + rangError.message, type: "error", visible: true });
+        return;
+      }
+    }
+
+    setSaving(false);
+    setToast({ message: `Traitement enregistré ✓ (${mode === "rang" ? rangs.length + " rangs" : "surface"})`, type: "success", visible: true });
+    setTimeout(() => router.push("/traitements"), 1000);
   }
 
   return (
@@ -151,31 +211,21 @@ export default function NewTraitementPage() {
       <form onSubmit={handleSubmit} className="space-y-3">
 
         {/* ===== Étape 1 — Identification ===== */}
-        <Section title="Identification" icon="📍" defaultOpen={true}>
+        <Section title="1. Identification" icon="📍" defaultOpen={true}>
           <SelectField label="Site" value={vignoble} onChange={(v) => { setVignoble(v); setParcelleId(""); }} options={vignoblesList.map(v => v.nom)} />
           {parcelles.length > 0 && (
             <SelectField label="Parcelle" value={parcelleId} onChange={setParcelleId} options={parcelles.map(p => ({ value: p.id, label: p.nom }))} />
           )}
-          <SelectField label="Protocole" value={protocoleId} onChange={setProtocoleId}
-            options={protocoleOptions.map(p => ({ value: p.id, label: `${p.code} — ${p.label}` }))} placeholder="Sélectionner un protocole" />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Date</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">Stade</label>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Stade végétatif</label>
             <div className="flex gap-2 flex-wrap">
               {STADES_TRAITEMENT.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStade(s)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    stade === s
-                      ? "bg-emerald-600 text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700"
-                  }`}
-                >
+                <button key={s} type="button" onClick={() => setStade(s)}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${stade === s ? "bg-emerald-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-emerald-50"}`}>
                   {s}
                 </button>
               ))}
@@ -183,115 +233,160 @@ export default function NewTraitementPage() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Opérateur</label>
-            <input type="text" value={operateur} onChange={(e) => setOperateur(e.target.value)} placeholder="Nom de l'opérateur" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+            <input type="text" value={operateur} onChange={(e) => setOperateur(e.target.value)} placeholder="Nom" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
           </div>
         </Section>
 
-        {/* ===== Étape 2 — Zone traitée ===== */}
-        <Section title="Zone traitée" icon="🗺️" defaultOpen={true}>
-          <div className="flex gap-2 mb-3">
-            <button
-              type="button"
-              onClick={() => setZoneType("rang")}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                zoneType === "rang"
-                  ? "bg-emerald-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              Par rang
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoneType("surface")}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                zoneType === "surface"
-                  ? "bg-emerald-600 text-white shadow-md"
-                  : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              Par surface
-            </button>
-          </div>
-          {zoneType === "rang" ? (
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Rang(s)</label>
-              <input type="text" value={zoneRang} onChange={(e) => setZoneRang(e.target.value)} placeholder="ex: R1, R2, R3…" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-            </div>
-          ) : (
-            <NumberField label="Surface" value={zoneSurfaceM2} onChange={setZoneSurfaceM2} unit="m²" />
+        {/* ===== Étape 2 — Protocole ===== */}
+        <Section title="2. Protocole" icon="📋" defaultOpen={true}>
+          <label className="flex items-center gap-2 cursor-pointer mb-2">
+            <input type="checkbox" checked={modeLibre} onChange={(e) => setModeLibre(e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+            <span className="text-sm font-medium">Mode libre (sans protocole)</span>
+          </label>
+          {!modeLibre && (
+            <SelectField label="Protocole" value={protocoleId} onChange={setProtocoleId}
+              options={protocoleOptions.map(p => ({ value: p.id, label: `${p.code} — ${p.label}` }))} placeholder="Sélectionner un protocole" />
           )}
         </Section>
 
-        {/* ===== Étape 3 — Modalité ===== */}
-        <Section title="Modalité" icon="🔬" defaultOpen={true}>
-          <SelectField label="Modalité levain" value={modaliteLevainId} onChange={setModaliteLevainId}
-            options={modaliteLevainOptions.map(m => ({ value: m.id, label: `${m.code} — ${m.label}` }))} placeholder="Sélectionner une modalité" />
+        {/* ===== Étape 3 — Type de zone ===== */}
+        <Section title="3. Type de zone" icon="🗺️" defaultOpen={true}>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setMode("rang")}
+              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${mode === "rang" ? "bg-emerald-600 text-white shadow-md" : "bg-gray-100 text-gray-600"}`}>
+              Par rangs
+            </button>
+            <button type="button" onClick={() => setMode("surface")}
+              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${mode === "surface" ? "bg-emerald-600 text-white shadow-md" : "bg-gray-100 text-gray-600"}`}>
+              Par surface
+            </button>
+          </div>
         </Section>
 
-        {/* ===== Étape 4 — Produit / pH ===== */}
-        <Section title="Produit & pH" icon="🧪" defaultOpen={true}>
-          <SelectField label="Produit" value={produitLevainId} onChange={setProduitLevainId}
-            options={produitOptions.map(p => ({ value: p.id, label: `${p.code} — ${p.label}` }))} placeholder="Sélectionner un produit" />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Dose réelle</label>
-            <input type="text" value={dose} onChange={(e) => setDose(e.target.value)} placeholder="ex: 1L/4L, 200g/hL…" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
-          </div>
-          <NumberField label="Volume bouillie" value={volumeBouillie} onChange={setVolumeBouillie} unit="L" step={0.5} />
+        {mode === "rang" ? (
+          <>
+            {/* ===== Étape 4 — Nombre de rangs ===== */}
+            <Section title="4. Nombre de rangs" icon="🔢" defaultOpen={true}>
+              <NumberField label="Nombre de rangs" value={nbRangs} onChange={(v) => setNbRangs(v ?? 7)} min={1} max={50} />
+              <p className="text-xs text-gray-400">{rangs.length} rang(s) générés automatiquement</p>
+            </Section>
+
+            {/* ===== Étape 5+6 — Saisie par rang ===== */}
+            <Section title="5. Modalité par rang" icon="🌱" defaultOpen={true}>
+              <p className="text-xs text-gray-400 mb-2">Attribuez une modalité à chaque rang. La dose et le commentaire sont optionnels.</p>
+              <div className="space-y-2">
+                {rangs.map((r, i) => (
+                  <div key={r.rang} className="bg-gray-50 rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">{r.rang}</span>
+                      <div className="flex-1">
+                        <select
+                          value={r.modalite_id}
+                          onChange={(e) => updateRang(i, "modalite_id", e.target.value)}
+                          className={`w-full border rounded-lg px-2 py-1.5 text-sm ${!r.modalite_id ? "border-red-300 bg-red-50/50" : "border-gray-200"}`}
+                        >
+                          <option value="">Modalité *</option>
+                          {modaliteOptions.map(m => (
+                            <option key={m.id} value={m.code}>{m.code} — {m.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={r.dose}
+                        onChange={(e) => updateRang(i, "dose", e.target.value)}
+                        placeholder="Dose (optionnel)"
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={r.commentaire}
+                        onChange={(e) => updateRang(i, "commentaire", e.target.value)}
+                        placeholder="Note (optionnel)"
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </>
+        ) : (
+          /* ===== Mode surface ===== */
+          <Section title="4. Surface & Modalité" icon="📐" defaultOpen={true}>
+            <NumberField label="Surface" value={surfaceHa} onChange={setSurfaceHa} unit="ha" step={0.01} />
+            <SelectField label="Modalité globale" value={modaliteGlobale} onChange={setModaliteGlobale}
+              options={modaliteOptions.map(m => ({ value: m.code, label: `${m.code} — ${m.label}` }))} placeholder="Sélectionner une modalité" />
+          </Section>
+        )}
+
+        {/* ===== Étape 7 — Paramètres globaux ===== */}
+        <Section title={mode === "rang" ? "6. Paramètres globaux" : "5. Paramètres globaux"} icon="⚗️">
+          <NumberField label="Volume bouillie" value={volumeBouillie} onChange={setVolumeBouillie} unit="L/ha" step={0.5} />
           <div className="grid grid-cols-2 gap-3">
             <NumberField label="pH eau" value={phEau} onChange={setPhEau} step={0.1} />
             <NumberField label="pH bouillie" value={phBouillie} onChange={setPhBouillie} step={0.1} />
           </div>
-          <SelectField label="Origine eau" value={origineEau} onChange={setOrigineEau} options={["Forage", "Robinet", "Pluie", "Autre"]} />
+          <SelectField label="Origine eau" value={origineEau} onChange={setOrigineEau} options={["Robinet", "Pluie", "Forage", "Autre"]} />
         </Section>
 
-        {/* ===== Étape 5 — Conditions météo ===== */}
-        <Section title="Conditions météo" icon="🌤️">
+        {/* ===== Étape 8 — Conditions météo ===== */}
+        <Section title={mode === "rang" ? "7. Conditions météo" : "6. Conditions météo"} icon="🌤️">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Heure</label>
+            <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <NumberField label="Température" value={temperature} onChange={setTemperature} unit="°C" step={0.5} />
             <NumberField label="Humidité" value={humidite} onChange={setHumidite} unit="%" />
           </div>
           <SelectField label="Vent" value={vent} onChange={setVent} options={[...VENT_OPTIONS]} />
-          <SelectField label="Couvert" value={couvert} onChange={setCouvert} options={[...METEO_OPTIONS]} />
+          <SelectField label="Couvert nuageux" value={couvert} onChange={setCouvert} options={[...METEO_OPTIONS]} />
         </Section>
 
-        {/* ===== Étape 6 — Type application ===== */}
-        <Section title="Type d'application" icon="🚜">
+        {/* ===== Étape 9 — Type application ===== */}
+        <Section title={mode === "rang" ? "8. Type d'application" : "7. Type d'application"} icon="🚜">
           <div className="grid grid-cols-1 gap-2">
             {TYPES_APPLICATION.map((t) => (
-              <button
-                key={t.code}
-                type="button"
-                onClick={() => setTypeApplication(t.code)}
-                className={`text-left px-4 py-3 rounded-xl border transition-all ${
-                  typeApplication === t.code
-                    ? "border-amber-500 bg-amber-50 ring-2 ring-amber-500/20"
-                    : "border-gray-200 hover:border-amber-300"
-                }`}
-              >
+              <button key={t.code} type="button" onClick={() => setTypeApplication(t.code)}
+                className={`text-left px-4 py-3 rounded-xl border transition-all ${typeApplication === t.code ? "border-amber-500 bg-amber-50 ring-2 ring-amber-500/20" : "border-gray-200 hover:border-amber-300"}`}>
                 <span className="text-sm font-medium">{t.label}</span>
               </button>
             ))}
           </div>
         </Section>
 
-        {/* ===== Étape 7 — Cas spécial ===== */}
-        <Section title="Cas spécial" icon="🔍">
+        {/* ===== Étape 10 — Options ===== */}
+        <Section title={mode === "rang" ? "9. Options" : "8. Options"} icon="🔍">
           <label className="flex items-center gap-3 cursor-pointer py-2">
-            <input
-              type="checkbox"
-              checked={prelevementSol}
-              onChange={(e) => setPrelevementSol(e.target.checked)}
-              className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-            />
+            <input type="checkbox" checked={prelevementSol} onChange={(e) => setPrelevementSol(e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
             <span className="text-sm font-medium">🧪 Prélèvement sol effectué</span>
           </label>
         </Section>
 
-        {/* ===== Étape 8 — Notes ===== */}
-        <Section title="Notes & anomalies" icon="💬">
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Observations terrain, anomalies…" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+        {/* ===== Étape 11 — Notes ===== */}
+        <Section title={mode === "rang" ? "10. Notes" : "9. Notes"} icon="💬">
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Observations terrain, anomalies…"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
         </Section>
+
+        {/* Résumé */}
+        {mode === "rang" && rangs.length > 0 && (
+          <div className="glass rounded-2xl p-4">
+            <div className="text-xs font-semibold text-gray-600 mb-2">📊 Résumé</div>
+            <div className="flex flex-wrap gap-1.5">
+              {rangs.map(r => (
+                <span key={r.rang} className={`text-xs px-2 py-1 rounded-lg ${r.modalite_id ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                  {r.rang} → {r.modalite_id || "?"}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button type="submit" disabled={saving} className="w-full btn-secondary">
           {saving ? (
@@ -300,7 +395,7 @@ export default function NewTraitementPage() {
               Enregistrement...
             </span>
           ) : (
-            "💾 Sauvegarder le traitement"
+            `💾 Sauvegarder le traitement${mode === "rang" ? ` (${rangs.length} rangs)` : ""}`
           )}
         </button>
       </form>

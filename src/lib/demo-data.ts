@@ -148,6 +148,11 @@ function genTraitements(): Traitement[] {
         ph_eau: 7.2,
         ph_bouillie: 5.8,
         origine_eau: 'Forage',
+        mode: 'rang',
+        nb_rangs: 7,
+        surface_ha: null,
+        modalite_globale: null,
+        heure: '08:00',
       });
     }
   }
