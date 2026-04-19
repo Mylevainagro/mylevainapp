@@ -54,8 +54,8 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   useEffect(() => {
     async function load() {
       const [v, p, m, pl] = await Promise.all([
-        supabase.from("vignobles").select("id, nom").order("nom"),
-        supabase.from("parcelles").select("id, vignoble_id, nom").order("nom"),
+        supabase.from("sites").select("id, nom").order("nom"),
+        supabase.from("parcelles").select("id, vignoble_id, site_id, nom").order("nom"),
         supabase.from("referentiel_modalites").select("*").eq("actif", true).order("rang"),
         supabase.from("placettes").select("*").eq("actif", true).order("nom"),
       ]);
@@ -130,7 +130,7 @@ export function ObservationForm({ initialData }: ObservationFormProps) {
   // Parcelles filtrées par site
   const parcelles = vignoble ? parcellesList.filter(p => {
     const v = vignoblesList.find(vv => vv.nom === vignoble);
-    return v && p.vignoble_id === v.id;
+    return v && ((p as any).site_id === v.id || p.vignoble_id === v.id);
   }) : [];
 
   // Placettes filtrées par parcelle (et optionnellement par modalité)

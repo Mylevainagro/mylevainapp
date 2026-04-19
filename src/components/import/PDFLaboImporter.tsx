@@ -98,7 +98,7 @@ export function PDFLaboImporter() {
   useEffect(() => {
     async function load() {
       const [v, p] = await Promise.all([
-        supabase.from("vignobles").select("id, nom").order("nom"),
+        supabase.from("sites").select("id, nom").order("nom"),
         supabase
           .from("parcelles")
           .select("id, vignoble_id, nom")

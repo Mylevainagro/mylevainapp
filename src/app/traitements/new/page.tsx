@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase/client";
 import { RecommandationBbch } from "@/components/traitements/RecommandationBbch";
 
 interface VignobleItem { id: string; nom: string; }
-interface ParcelleItem { id: string; vignoble_id: string; nom: string; }
+interface ParcelleItem { id: string; vignoble_id: string; site_id: string | null; nom: string; }
 interface ProtocoleOption { id: string; code: string; label: string; }
 interface ModaliteLevainOption { id: string; code: string; label: string; }
 interface BbchOption { id: string; code: string; label: string; }
@@ -42,8 +42,8 @@ export default function NewTraitementPage() {
   useEffect(() => {
     async function load() {
       const [v, p, proto, modLev] = await Promise.all([
-        supabase.from("vignobles").select("id, nom").order("nom"),
-        supabase.from("parcelles").select("id, vignoble_id, nom").order("nom"),
+        supabase.from("sites").select("id, nom").order("nom"),
+        supabase.from("parcelles").select("id, vignoble_id, site_id, nom").order("nom"),
         supabase.from("protocoles").select("id, code, label").eq("actif", true).order("ordre"),
         supabase.from("modalites_levain").select("id, code, label").eq("actif", true).order("ordre"),
       ]);
@@ -135,7 +135,7 @@ export default function NewTraitementPage() {
 
   const parcelles = vignoble ? parcellesList.filter(p => {
     const v = vignoblesList.find(vv => vv.nom === vignoble);
-    return v && p.vignoble_id === v.id;
+    return v && (p.site_id === v.id || p.vignoble_id === v.id);
   }) : [];
 
   // Générer les rangs quand nbRangs change
