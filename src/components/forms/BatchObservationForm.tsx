@@ -307,7 +307,7 @@ export function BatchObservationForm() {
                     {isExpanded ? "▲" : "▼"}
                   </button>
                   <button type="button" onClick={() => duplicateLine(i)} className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg" title="Dupliquer">📋</button>
-                  <button type="button" onClick={() => removeLine(i)} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg" title="Supprimer">✕</button>
+                  <button type="button" onClick={() => removeLine(i)} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg" title="Supprimer la ligne">🗑</button>
                 </div>
 
                 {/* Expanded detail */}
