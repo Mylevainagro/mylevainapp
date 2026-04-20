@@ -3,21 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #10b981;
-  --color-primary-dark: #059669;
-  --color-primary-light: #34d399;
-  --color-accent: #f59e0b;
-  --color-accent-light: #fbbf24;
-  --color-bg: #1e3a2f;
-  --color-card: #243d33;
-  --color-text: #f0f7f4;
-  --color-muted: #a3c4b5;
-  --color-border: #2f5244;
+  --color-primary: #059669;
+  --color-primary-dark: #047857;
+  --color-primary-light: #10b981;
+  --color-accent: #d97706;
+  --color-accent-light: #f59e0b;
+  --color-bg: #f0fdf4;
+  --color-card: #ffffff;
+  --color-text: #1f2937;
+  --color-muted: #6b7280;
+  --color-border: #d1fae5;
   --radius: 16px;
 }
 
 body {
-  background: linear-gradient(160deg, #1a3328 0%, #1e3a2f 40%, #1b2f3a 100%);
+  background: linear-gradient(160deg, #ecfdf5 0%, #f0fdf4 50%, #f0fdfa 100%);
   background-attachment: fixed;
   color: var(--color-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -28,22 +28,22 @@ body {
 
 /* Modern card style */
 .card {
-  @apply bg-[#243d33]/90 backdrop-blur-sm rounded-2xl shadow-lg border border-[#2f5244]/60;
+  @apply bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-emerald-100/60;
 }
 
 /* Gradient text */
 .gradient-text {
-  @apply bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-emerald-800 to-emerald-600 bg-clip-text text-transparent;
 }
 
 /* Primary button */
 .btn-primary {
-  @apply bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-800/30 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all active:scale-[0.98];
+  @apply bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-emerald-200/50 hover:shadow-emerald-300/50 hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-50 transition-all active:scale-[0.98];
 }
 
 /* Secondary button */
 .btn-secondary {
-  @apply bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-amber-900/20 hover:shadow-amber-800/30 disabled:opacity-50 transition-all active:scale-[0.98];
+  @apply bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50 disabled:opacity-50 transition-all active:scale-[0.98];
 }
 
 /* Loader bar animation */
@@ -135,12 +135,12 @@ html {
 
 /* Glassmorphism effect */
 .glass {
-  @apply bg-[#243d33]/80 backdrop-blur-md border border-[#2f5244]/60 shadow-lg;
+  @apply bg-white/80 backdrop-blur-md border border-emerald-100/40 shadow-sm;
 }
 
 /* Subtle glow on focus */
 input:focus, select:focus, textarea:focus {
-  @apply ring-2 ring-emerald-500/30 border-emerald-500/50;
+  @apply ring-2 ring-emerald-500/20 border-emerald-400;
 }
 
 /* Safe area for bottom nav */
