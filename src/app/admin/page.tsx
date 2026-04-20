@@ -195,7 +195,7 @@ export default function AdminPage() {
 
   async function saveParcelle() {
     setSaving(true); const d = modal?.data;
-    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null, latitude: d.latitude || null, longitude: d.longitude || null, nb_rangs: d.nb_rangs || null, longueur: d.longueur || null, ecartement: d.ecartement || null };
+    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null, latitude: d.latitude || null, longitude: d.longitude || null, nb_rangs: d.nb_rangs || null, longueur: d.longueur || null, ecartement: d.ecartement || null, annee_protocole: d.annee_protocole || null, photo_url: d.photo_url || null, plan_pdf_url: d.plan_pdf_url || null };
     let parcelleId = d.id;
     if (d.id) { await supabase.from("parcelles").update(payload).eq("id", d.id); showToast("Parcelle modifiée"); }
     else { const { data: newP, error } = await supabase.from("parcelles").insert(payload).select("id").single(); if (error) { showToast(error.message, "error"); setSaving(false); setModal(null); return; } else { showToast("Parcelle ajoutée"); parcelleId = newP.id; } }
@@ -462,6 +462,8 @@ export default function AdminPage() {
         <input value={modal?.data?.variete || ""} onChange={e => updateModal("variete", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder={cultures.find(c => c.id === modal?.data?.culture_id)?.code === 'vigne' ? 'ex: Merlot, Saint-Émilion Grand Cru' : 'ex: Roma, Golden'} />
         <label className="text-sm font-medium">Nom de la parcelle *</label>
         <input value={modal?.data?.nom || ""} onChange={e => updateModal("nom", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Merlot 3, Champ Nord" />
+        <label className="text-sm font-medium">Année du protocole</label>
+        <input value={modal?.data?.annee_protocole || ""} onChange={e => updateModal("annee_protocole", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: 2026" />
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label className="text-sm font-medium">Nb rangs</label>
@@ -572,6 +574,10 @@ export default function AdminPage() {
         </select>
         <label className="text-sm font-medium">Commentaire</label>
         <textarea value={modal?.data?.commentaire || ""} onChange={e => updateModal("commentaire", e.target.value)} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Notes libres sur la parcelle…" />
+        <label className="text-sm font-medium">📷 Photo parcelle (URL)</label>
+        <input value={modal?.data?.photo_url || ""} onChange={e => updateModal("photo_url", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="URL de la photo" />
+        <label className="text-sm font-medium">📄 PDF plan expérimental (URL)</label>
+        <input value={modal?.data?.plan_pdf_url || ""} onChange={e => updateModal("plan_pdf_url", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="URL du PDF" />
         <GpsField
           latitude={modal?.data?.latitude ?? null}
           longitude={modal?.data?.longitude ?? null}

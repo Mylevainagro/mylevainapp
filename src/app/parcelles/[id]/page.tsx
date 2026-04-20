@@ -11,6 +11,7 @@ interface ParcelleDetail {
   type_culture: string | null; nb_rangs: number | null; longueur: number | null; ecartement: number | null;
   commentaire: string | null; latitude: number | null; longitude: number | null;
   site_id: string | null; vignoble_id: string | null;
+  annee_protocole: string | null; photo_url: string | null; plan_pdf_url: string | null;
 }
 interface SiteInfo { nom: string; }
 interface PlacetteInfo { id: string; nom: string; nb_ceps: number; modalite_id: string | null; description_position: string | null; pieds_marques: string | null; }
@@ -97,8 +98,25 @@ export default function ParcelleDetailPage() {
   return (
     <div>
       <Link href={siteId ? `/vignobles/${siteId}` : "/"} className="text-sm text-gray-500 hover:text-emerald-600">← {siteName || "Retour"}</Link>
-      <h1 className="text-xl font-bold gradient-text mt-2 mb-1">{parcelle.nom}</h1>
+      <h1 className="text-xl font-bold gradient-text mt-2 mb-1">{parcelle.nom}{parcelle.annee_protocole && ` (${parcelle.annee_protocole})`}</h1>
       {siteName && <p className="text-sm text-gray-500">{siteName}</p>}
+
+      {/* Photo parcelle */}
+      {parcelle.photo_url && (
+        <div className="mt-3 mb-3">
+          <a href={parcelle.photo_url} target="_blank" rel="noopener noreferrer">
+            <img src={parcelle.photo_url} alt={`Photo ${parcelle.nom}`} className="w-full h-48 object-cover rounded-2xl shadow-sm" />
+          </a>
+        </div>
+      )}
+
+      {/* PDF plan expérimental */}
+      {parcelle.plan_pdf_url && (
+        <a href={parcelle.plan_pdf_url} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 glass rounded-xl px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition-colors mb-3">
+          📄 Voir le plan expérimental (PDF)
+        </a>
+      )}
 
       {/* Infos générales */}
       <div className="glass rounded-2xl p-4 mt-4 mb-4">

@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import { ListSkeleton } from "@/components/Skeleton";
 
 interface SiteData { id: string; nom: string; localisation: string | null; type_exploitation: string | null; adresse: string | null; latitude: number | null; longitude: number | null; }
-interface ParcelleData { id: string; nom: string; variete: string | null; surface: number | null; sol: string | null; type_culture: string | null; latitude: number | null; longitude: number | null; }
+interface ParcelleData { id: string; nom: string; variete: string | null; surface: number | null; sol: string | null; type_culture: string | null; latitude: number | null; longitude: number | null; annee_protocole: string | null; photo_url: string | null; plan_pdf_url: string | null; }
 interface PlacetteData { id: string; parcelle_id: string; nom: string; nb_ceps: number; modalite_id: string | null; }
 interface AnalyseData { id: string; parcelle_id: string; date_prelevement: string; phase: string; ph: number | null; matiere_organique_pct: number | null; score_sante_sol: number | null; cuivre_total: number | null; biomasse_microbienne: number | null; fichier_pdf_url: string | null; }
 interface RecoData { id: string; bbch_min: string; bbch_max: string; type: string; priorite: string; message: string; }
@@ -209,7 +209,7 @@ export default function VignoblePage() {
       if (demoSite) {
         setSite({ id: demoSite.id, nom: demoSite.nom, localisation: demoSite.localisation, type_exploitation: demoSite.type_site, adresse: null, latitude: (demoSite as any).latitude ?? null, longitude: (demoSite as any).longitude ?? null });
         const dp = DEMO_PARCELLES.filter((p) => p.vignoble_id === id);
-        setParcelles(dp.map(p => ({ id: p.id, nom: p.nom, variete: (p as any).variete || p.cepage, surface: (p as any).surface || null, sol: (p as any).sol || null, type_culture: (p as any).type_culture || null, latitude: null, longitude: null })));
+        setParcelles(dp.map(p => ({ id: p.id, nom: p.nom, variete: (p as any).variete || p.cepage, surface: (p as any).surface || null, sol: (p as any).sol || null, type_culture: (p as any).type_culture || null, latitude: null, longitude: null, annee_protocole: null, photo_url: null, plan_pdf_url: null })));
         setPlacettes((DEMO_PLACETTES ?? []).filter(pl => dp.some(p => p.id === pl.parcelle_id)));
         setAnalyses(DEMO_ANALYSES.filter(a => dp.some(p => p.id === a.parcelle_id)));
         // Demo recommandations (hardcoded for demo)
@@ -246,7 +246,7 @@ export default function VignoblePage() {
       }
 
       // Load parcelles (by site_id or vignoble_id)
-      const { data: parcData } = await supabase.from("parcelles").select("id, nom, variete, surface, sol, type_culture, site_id, vignoble_id, latitude, longitude").order("nom");
+      const { data: parcData } = await supabase.from("parcelles").select("id, nom, variete, surface, sol, type_culture, site_id, vignoble_id, latitude, longitude, annee_protocole, photo_url, plan_pdf_url").order("nom");
       const myParcelles = (parcData ?? []).filter((p: any) => p.site_id === id || p.vignoble_id === id);
       setParcelles(myParcelles);
 
@@ -315,7 +315,7 @@ export default function VignoblePage() {
             <Link key={p.id} href={`/parcelles/${p.id}`} className="block glass rounded-2xl p-4 space-y-2 active:scale-[0.98] transition-all hover:ring-2 hover:ring-emerald-400/30">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-medium text-gray-800">{p.nom}</div>
+                  <div className="font-medium text-gray-800">{p.nom}{p.annee_protocole && ` (${p.annee_protocole})`}</div>
                   <div className="text-xs text-gray-500">
                     {p.variete || "—"}
                     {p.surface && ` · ${p.surface} ha`}
