@@ -8,6 +8,7 @@ import { AdminCard } from "@/components/admin/AdminCard";
 import { EditModal } from "@/components/admin/EditModal";
 import { Toast } from "@/components/Toast";
 import { ListSkeleton } from "@/components/Skeleton";
+import { GpsField } from "@/components/ui/GpsField";
 
 // ---- Types locaux simplifiés ----
 interface SiteItem { id: string; nom: string; type_exploitation: string | null; adresse: string | null; latitude: number | null; longitude: number | null; actif: boolean; }
@@ -175,7 +176,7 @@ export default function AdminPage() {
   // ---- CRUD Parcelles ----
   async function saveParcelle() {
     setSaving(true); const d = modal?.data;
-    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null };
+    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null, latitude: d.latitude || null, longitude: d.longitude || null };
     if (d.id) { await supabase.from("parcelles").update(payload).eq("id", d.id); showToast("Parcelle modifiée"); }
     else { const { error } = await supabase.from("parcelles").insert(payload); if (error) showToast(error.message, "error"); else showToast("Parcelle ajoutée"); }
     setSaving(false); setModal(null);
@@ -460,10 +461,12 @@ export default function AdminPage() {
         </select>
         <label className="text-sm font-medium">Adresse</label>
         <input value={modal?.data?.adresse || ""} onChange={e => updateModal("adresse", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Saint-Émilion, Gironde" />
-        <div className="grid grid-cols-2 gap-2">
-          <div><label className="text-xs font-medium">Latitude</label><input type="number" step="0.000001" value={modal?.data?.latitude ?? ""} onChange={e => updateModal("latitude", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" /></div>
-          <div><label className="text-xs font-medium">Longitude</label><input type="number" step="0.000001" value={modal?.data?.longitude ?? ""} onChange={e => updateModal("longitude", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" /></div>
-        </div>
+        <GpsField
+          latitude={modal?.data?.latitude ?? null}
+          longitude={modal?.data?.longitude ?? null}
+          onChangeLatitude={v => updateModal("latitude", v)}
+          onChangeLongitude={v => updateModal("longitude", v)}
+        />
       </EditModal>
 
       {/* Modal Parcelle */}
@@ -491,6 +494,12 @@ export default function AdminPage() {
         </select>
         <label className="text-sm font-medium">Commentaire</label>
         <textarea value={modal?.data?.commentaire || ""} onChange={e => updateModal("commentaire", e.target.value)} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Notes libres sur la parcelle…" />
+        <GpsField
+          latitude={modal?.data?.latitude ?? null}
+          longitude={modal?.data?.longitude ?? null}
+          onChangeLatitude={v => updateModal("latitude", v)}
+          onChangeLongitude={v => updateModal("longitude", v)}
+        />
       </EditModal>
 
       {/* Modal Placette */}

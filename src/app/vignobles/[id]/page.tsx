@@ -9,8 +9,8 @@ import { DernierTraitementCard } from "@/components/traitements/DernierTraitemen
 import { supabase } from "@/lib/supabase/client";
 import { ListSkeleton } from "@/components/Skeleton";
 
-interface SiteData { id: string; nom: string; localisation: string | null; type_exploitation: string | null; adresse: string | null; }
-interface ParcelleData { id: string; nom: string; variete: string | null; surface: number | null; sol: string | null; type_culture: string | null; }
+interface SiteData { id: string; nom: string; localisation: string | null; type_exploitation: string | null; adresse: string | null; latitude: number | null; longitude: number | null; }
+interface ParcelleData { id: string; nom: string; variete: string | null; surface: number | null; sol: string | null; type_culture: string | null; latitude: number | null; longitude: number | null; }
 interface PlacetteData { id: string; parcelle_id: string; nom: string; nb_ceps: number; modalite_id: string | null; }
 interface AnalyseData { id: string; parcelle_id: string; date_prelevement: string; phase: string; ph: number | null; matiere_organique_pct: number | null; score_sante_sol: number | null; cuivre_total: number | null; biomasse_microbienne: number | null; fichier_pdf_url: string | null; }
 interface RecoData { id: string; bbch_min: string; bbch_max: string; type: string; priorite: string; message: string; }
@@ -186,9 +186,9 @@ export default function VignoblePage() {
       // Demo mode
       const demoSite = DEMO_VIGNOBLES.find((v) => v.id === id);
       if (demoSite) {
-        setSite({ id: demoSite.id, nom: demoSite.nom, localisation: demoSite.localisation, type_exploitation: demoSite.type_site, adresse: null });
+        setSite({ id: demoSite.id, nom: demoSite.nom, localisation: demoSite.localisation, type_exploitation: demoSite.type_site, adresse: null, latitude: (demoSite as any).latitude ?? null, longitude: (demoSite as any).longitude ?? null });
         const dp = DEMO_PARCELLES.filter((p) => p.vignoble_id === id);
-        setParcelles(dp.map(p => ({ id: p.id, nom: p.nom, variete: (p as any).variete || p.cepage, surface: (p as any).surface || null, sol: (p as any).sol || null, type_culture: (p as any).type_culture || null })));
+        setParcelles(dp.map(p => ({ id: p.id, nom: p.nom, variete: (p as any).variete || p.cepage, surface: (p as any).surface || null, sol: (p as any).sol || null, type_culture: (p as any).type_culture || null, latitude: null, longitude: null })));
         setPlacettes((DEMO_PLACETTES ?? []).filter(pl => dp.some(p => p.id === pl.parcelle_id)));
         setAnalyses(DEMO_ANALYSES.filter(a => dp.some(p => p.id === a.parcelle_id)));
         // Demo recommandations (hardcoded for demo)
@@ -215,17 +215,17 @@ export default function VignoblePage() {
     // Real mode — load from Supabase
     async function load() {
       // Load site
-      const { data: siteData } = await supabase.from("sites").select("id, nom, localisation, type_exploitation, adresse").eq("id", id).single();
+      const { data: siteData } = await supabase.from("sites").select("id, nom, localisation, type_exploitation, adresse, latitude, longitude").eq("id", id).single();
       if (siteData) {
         setSite(siteData);
       } else {
         // Fallback: try vignobles table
         const { data: vigData } = await supabase.from("vignobles").select("id, nom, localisation").eq("id", id).single();
-        if (vigData) setSite({ ...vigData, type_exploitation: null, adresse: null });
+        if (vigData) setSite({ ...vigData, type_exploitation: null, adresse: null, latitude: null, longitude: null });
       }
 
       // Load parcelles (by site_id or vignoble_id)
-      const { data: parcData } = await supabase.from("parcelles").select("id, nom, variete, surface, sol, type_culture, site_id, vignoble_id").order("nom");
+      const { data: parcData } = await supabase.from("parcelles").select("id, nom, variete, surface, sol, type_culture, site_id, vignoble_id, latitude, longitude").order("nom");
       const myParcelles = (parcData ?? []).filter((p: any) => p.site_id === id || p.vignoble_id === id);
       setParcelles(myParcelles);
 
@@ -281,6 +281,9 @@ export default function VignoblePage() {
       {site.localisation && <p className="text-sm text-gray-500">{site.localisation}</p>}
       {site.type_exploitation && <p className="text-xs text-amber-600 font-medium mt-0.5">{TYPE_LABELS[site.type_exploitation] ?? site.type_exploitation}</p>}
       {site.adresse && <p className="text-xs text-gray-400 mt-0.5">📍 {site.adresse}</p>}
+      {site.latitude && site.longitude && (
+        <p className="text-[10px] text-gray-400 mt-0.5">🌐 GPS : {site.latitude}, {site.longitude}</p>
+      )}
 
       {/* Parcelles */}
       <h2 className="text-lg font-bold text-gray-800 mt-6 mb-3">🌿 Parcelles</h2>
@@ -297,6 +300,9 @@ export default function VignoblePage() {
                   {p.sol && ` · ${p.sol}`}
                   {p.type_culture && ` · ${p.type_culture}`}
                 </div>
+                {p.latitude && p.longitude && (
+                  <div className="text-[10px] text-gray-400">🌐 {p.latitude}, {p.longitude}</div>
+                )}
               </div>
               <div className="flex gap-4 text-xs text-gray-500">
                 <span>📝 Obs : <strong className="text-gray-700">{formatDate(lastObsDates[p.id])}</strong></span>
