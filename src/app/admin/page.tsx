@@ -176,7 +176,7 @@ export default function AdminPage() {
   // ---- CRUD Parcelles ----
   async function saveParcelle() {
     setSaving(true); const d = modal?.data;
-    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null, latitude: d.latitude || null, longitude: d.longitude || null };
+    const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null, latitude: d.latitude || null, longitude: d.longitude || null, nb_rangs: d.nb_rangs || null, longueur: d.longueur || null, ecartement: d.ecartement || null };
     if (d.id) { await supabase.from("parcelles").update(payload).eq("id", d.id); showToast("Parcelle modifiée"); }
     else { const { error } = await supabase.from("parcelles").insert(payload); if (error) showToast(error.message, "error"); else showToast("Parcelle ajoutée"); }
     setSaving(false); setModal(null);
@@ -369,7 +369,7 @@ export default function AdminPage() {
         {protocoles.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun protocole</p>}
       </AdminCard>
 
-      <AdminCard title="🧪 Modalités" onAdd={() => setModal({ type: "modalite", data: { code: "", label: "", dilution: "", description: "", ordre: modalites.length + 1 } })}>
+      <AdminCard title="🧪 Protocole expérimental" onAdd={() => setModal({ type: "modalite", data: { code: "", label: "", dilution: "", description: "", ordre: modalites.length + 1 } })}>
         {modalites.map(m => (
           <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${!m.actif ? "opacity-40" : ""}`}>
             <div className="flex items-center gap-3">
@@ -485,8 +485,50 @@ export default function AdminPage() {
         <input value={modal?.data?.variete || ""} onChange={e => updateModal("variete", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder={cultures.find(c => c.id === modal?.data?.culture_id)?.code === 'vigne' ? 'ex: Merlot, Saint-Émilion Grand Cru' : 'ex: Roma, Golden'} />
         <label className="text-sm font-medium">Nom de la parcelle *</label>
         <input value={modal?.data?.nom || ""} onChange={e => updateModal("nom", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="ex: Merlot 3, Champ Nord" />
-        <label className="text-sm font-medium">Surface (ha)</label>
-        <input type="number" step="0.01" value={modal?.data?.surface ?? ""} onChange={e => updateModal("surface", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <label className="text-sm font-medium">Nb rangs</label>
+            <input type="number" min={1} max={200} value={modal?.data?.nb_rangs ?? ""} onChange={e => {
+              const nb = e.target.value ? Number(e.target.value) : null;
+              updateModal("nb_rangs", nb);
+              // Auto-calc surface
+              if (nb && modal?.data?.longueur && modal?.data?.ecartement) {
+                updateModal("surface", Math.round(nb * modal.data.longueur * modal.data.ecartement / 10000 * 100) / 100);
+              }
+            }} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" placeholder="7" />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Longueur (m)</label>
+            <input type="number" step="1" value={modal?.data?.longueur ?? ""} onChange={e => {
+              const l = e.target.value ? Number(e.target.value) : null;
+              updateModal("longueur", l);
+              if (modal?.data?.nb_rangs && l && modal?.data?.ecartement) {
+                updateModal("surface", Math.round(modal.data.nb_rangs * l * modal.data.ecartement / 10000 * 100) / 100);
+              }
+            }} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" placeholder="100" />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Écart. (m)</label>
+            <input type="number" step="0.1" value={modal?.data?.ecartement ?? ""} onChange={e => {
+              const ec = e.target.value ? Number(e.target.value) : null;
+              updateModal("ecartement", ec);
+              if (modal?.data?.nb_rangs && modal?.data?.longueur && ec) {
+                updateModal("surface", Math.round(modal.data.nb_rangs * modal.data.longueur * ec / 10000 * 100) / 100);
+              }
+            }} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" placeholder="1.5" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <label className="text-sm font-medium">Surface (ha)</label>
+            <input type="number" step="0.01" value={modal?.data?.surface ?? ""} onChange={e => updateModal("surface", e.target.value ? Number(e.target.value) : null)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          {modal?.data?.nb_rangs && modal?.data?.longueur && modal?.data?.ecartement && (
+            <div className="text-[10px] text-emerald-600 mt-5">
+              ✓ {modal.data.nb_rangs} × {modal.data.longueur}m × {modal.data.ecartement}m = {modal.data.surface} ha
+            </div>
+          )}
+        </div>
         <label className="text-sm font-medium">Type de sol</label>
         <select value={modal?.data?.sol || ""} onChange={e => updateModal("sol", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">Sélectionner…</option>
