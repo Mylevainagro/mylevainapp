@@ -378,26 +378,7 @@ export default function AdminPage() {
         {placettes.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune placette</p>}
       </AdminCard>
 
-      {/* ======== PROTOCOLE EXPÉRIMENTAL ======== */}
-      <h2 className="text-lg font-bold gradient-text mt-6">🧪 Protocole expérimental</h2>
-
-      <AdminCard title="🧪 Protocole expérimental" onAdd={() => setModal({ type: "modalite", data: { code: "", label: "", dilution: "", description: "", ordre: modalites.length + 1 } })}>
-        {modalites.map(m => (
-          <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${!m.actif ? "opacity-40" : ""}`}>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">{m.code}</span>
-              <div><div className="font-medium text-sm">{m.label}</div><div className="text-xs text-gray-500">{m.dilution || "—"}</div></div>
-            </div>
-            <div className="flex gap-1.5">
-              <button onClick={() => setModal({ type: "modalite", data: { ...m } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg">✏️</button>
-              <button onClick={() => deleteModalite(m.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg">🗑</button>
-            </div>
-          </div>
-        ))}
-        {modalites.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune modalité</p>}
-      </AdminCard>
-
-      {/* ======== RESET ======== */}
+      {/* ======== CULTURES & BBCH ======== */}
       <h2 className="text-lg font-bold gradient-text mt-6">🌾 Cultures & Stades BBCH</h2>
 
       <AdminCard title="🌾 Cultures" onAdd={() => setModal({ type: "culture", data: { code: "", nom: "" } })}>
