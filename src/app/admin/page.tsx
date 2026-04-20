@@ -350,24 +350,8 @@ export default function AdminPage() {
         {placettes.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune placette</p>}
       </AdminCard>
 
-      {/* ======== PROTOCOLES & MODALITÉS & PRODUITS ======== */}
-      <h2 className="text-lg font-bold gradient-text mt-6">🧪 Protocoles & Produits</h2>
-
-      <AdminCard title="📋 Protocoles" onAdd={() => setModal({ type: "protocole", data: { code: "", label: "", type: "simple", description: "", ordre: protocoles.length + 1 } })}>
-        {protocoles.map(p => (
-          <div key={p.id} className={`flex items-center justify-between px-4 py-3 ${!p.actif ? "opacity-40" : ""}`}>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">{p.code}</span>
-              <div><div className="font-medium text-sm">{p.label}</div><div className="text-xs text-gray-500">{p.type}</div></div>
-            </div>
-            <div className="flex gap-1.5">
-              <button onClick={() => setModal({ type: "protocole", data: { ...p } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg">✏️</button>
-              <button onClick={() => deleteProtocole(p.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg">🗑</button>
-            </div>
-          </div>
-        ))}
-        {protocoles.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun protocole</p>}
-      </AdminCard>
+      {/* ======== PROTOCOLE EXPÉRIMENTAL ======== */}
+      <h2 className="text-lg font-bold gradient-text mt-6">🧪 Protocole expérimental</h2>
 
       <AdminCard title="🧪 Protocole expérimental" onAdd={() => setModal({ type: "modalite", data: { code: "", label: "", dilution: "", description: "", ordre: modalites.length + 1 } })}>
         {modalites.map(m => (
@@ -383,22 +367,6 @@ export default function AdminPage() {
           </div>
         ))}
         {modalites.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucune modalité</p>}
-      </AdminCard>
-
-      <AdminCard title="🌿 Produits" onAdd={() => setModal({ type: "produit", data: { code: "", label: "", type: "levain", origine: "", description: "", ordre: produits.length + 1 } })}>
-        {produits.map(p => (
-          <div key={p.id} className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">{p.code}</span>
-              <div><div className="font-medium text-sm">{p.label}</div><div className="text-xs text-gray-500">{p.type} · {p.origine || "—"}</div></div>
-            </div>
-            <div className="flex gap-1.5">
-              <button onClick={() => setModal({ type: "produit", data: { ...p } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg">✏️</button>
-              <button onClick={() => deleteProduit(p.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg">🗑</button>
-            </div>
-          </div>
-        ))}
-        {produits.length === 0 && <p className="px-4 py-3 text-sm text-gray-400">Aucun produit</p>}
       </AdminCard>
 
       {/* ======== RESET ======== */}
