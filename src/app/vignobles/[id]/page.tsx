@@ -76,6 +76,8 @@ const PRIORITE_COLORS: Record<string, { bg: string; text: string; icon: string }
 };
 
 function RecommandationsStrategiques({ recos }: { recos: RecoData[] }) {
+  const [showAll, setShowAll] = useState(false);
+
   if (recos.length === 0 && RECOS_INTER_CAMPAGNE.length === 0) return null;
 
   const now = new Date();
@@ -99,11 +101,16 @@ function RecommandationsStrategiques({ recos }: { recos: RecoData[] }) {
     .filter(p => p.recos.length > 0)
     .filter(p => p.moisNum >= currentMonth); // Hide past months
 
+  // Limit to 2 months unless showAll
+  const visiblePlanning = showAll ? planningCampagne : planningCampagne.slice(0, 2);
+  const hasMore = planningCampagne.length > 2;
+
   // Inter-campagne: show if we're past September (campagne terminée) or before April
   const isInterCampagne = currentMonth >= 10 || currentMonth <= 3;
   const interRecos = isInterCampagne
     ? RECOS_INTER_CAMPAGNE.filter(r => r.moisNum >= currentMonth || (currentMonth >= 10 && r.moisNum <= 3))
     : [];
+  const visibleInter = showAll ? interRecos : interRecos.slice(0, 2);
 
   if (planningCampagne.length === 0 && interRecos.length === 0) return null;
 
@@ -113,10 +120,10 @@ function RecommandationsStrategiques({ recos }: { recos: RecoData[] }) {
       <p className="text-xs text-gray-500 mb-4">Prévisionnel basé sur les stades BBCH. Les périodes passées sont masquées automatiquement.</p>
 
       {/* Inter-campagne (hiver) */}
-      {interRecos.length > 0 && (
+      {visibleInter.length > 0 && (
         <div className="space-y-3 mb-4">
           <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider">🌨️ Préparation campagne {campagneYear}</div>
-          {interRecos.map((r, i) => {
+          {visibleInter.map((r, i) => {
             const style = PRIORITE_COLORS[r.priorite] ?? PRIORITE_COLORS.optionnel;
             return (
               <div key={i} className={`${style.bg} border rounded-xl p-3 space-y-1`}>
@@ -132,10 +139,10 @@ function RecommandationsStrategiques({ recos }: { recos: RecoData[] }) {
       )}
 
       {/* Campagne en cours */}
-      {planningCampagne.length > 0 && (
-        <div className="space-y-3 mb-6">
-          {interRecos.length > 0 && <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">🌱 Campagne en cours</div>}
-          {planningCampagne.map((p, i) => (
+      {visiblePlanning.length > 0 && (
+        <div className="space-y-3 mb-4">
+          {visibleInter.length > 0 && <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">🌱 Campagne en cours</div>}
+          {visiblePlanning.map((p, i) => (
             <div key={i} className="glass rounded-2xl p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
@@ -162,6 +169,20 @@ function RecommandationsStrategiques({ recos }: { recos: RecoData[] }) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Bouton voir plus */}
+      {hasMore && !showAll && (
+        <button type="button" onClick={() => setShowAll(true)}
+          className="w-full glass rounded-xl py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors mb-4">
+          📅 Voir toutes les recommandations de la campagne ({planningCampagne.length - 2} de plus)
+        </button>
+      )}
+      {showAll && hasMore && (
+        <button type="button" onClick={() => setShowAll(false)}
+          className="w-full glass rounded-xl py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors mb-4">
+          ▲ Réduire
+        </button>
       )}
 
       <p className="text-[10px] text-gray-400 italic mb-6">ℹ️ Adapter selon la pression mildiou et les conditions météo. Consulter l&apos;agronome pour les cas spécifiques.</p>
