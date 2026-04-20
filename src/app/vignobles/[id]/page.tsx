@@ -46,15 +46,24 @@ function formatDate(d: string | null): string {
 
 const TYPE_LABELS: Record<string, string> = { vignoble: "Vignoble", maraichage: "Maraîchage", grande_culture: "Grande culture", verger: "Verger", serre: "Serre", mixte: "Mixte" };
 
-// Calendrier prévisionnel vigne 2026 — mois → stade BBCH approximatif
-const CALENDRIER_VIGNE: { mois: string; date_approx: string; bbch: string; stade: string }[] = [
-  { mois: "Avril", date_approx: "mi-avril", bbch: "05-09", stade: "Débourrement" },
-  { mois: "Mai", date_approx: "début mai", bbch: "12-15", stade: "Feuilles étalées" },
-  { mois: "Mai", date_approx: "fin mai", bbch: "17-19", stade: "Grappes séparées" },
-  { mois: "Juin", date_approx: "mi-juin", bbch: "23-27", stade: "Floraison / Nouaison" },
-  { mois: "Juillet", date_approx: "début juillet", bbch: "31-33", stade: "Fermeture grappe" },
-  { mois: "Juillet", date_approx: "fin juillet", bbch: "35-38", stade: "Véraison / Maturité" },
-  { mois: "Septembre", date_approx: "septembre", bbch: "41-43", stade: "Post-récolte" },
+// Calendrier prévisionnel vigne — mois numérique pour filtrage automatique
+const CALENDRIER_VIGNE: { mois: string; moisNum: number; date_approx: string; bbch: string; stade: string }[] = [
+  { mois: "Avril", moisNum: 4, date_approx: "mi-avril", bbch: "05-09", stade: "Débourrement" },
+  { mois: "Mai", moisNum: 5, date_approx: "début mai", bbch: "12-15", stade: "Feuilles étalées" },
+  { mois: "Mai", moisNum: 5, date_approx: "fin mai", bbch: "17-19", stade: "Grappes séparées" },
+  { mois: "Juin", moisNum: 6, date_approx: "mi-juin", bbch: "23-27", stade: "Floraison / Nouaison" },
+  { mois: "Juillet", moisNum: 7, date_approx: "début juillet", bbch: "31-33", stade: "Fermeture grappe" },
+  { mois: "Juillet", moisNum: 7, date_approx: "fin juillet", bbch: "35-38", stade: "Véraison / Maturité" },
+  { mois: "Septembre", moisNum: 9, date_approx: "septembre", bbch: "41-43", stade: "Post-récolte" },
+];
+
+// Recommandations inter-campagne (après vendanges → avant débourrement)
+const RECOS_INTER_CAMPAGNE: { mois: string; moisNum: number; titre: string; priorite: string; message: string }[] = [
+  { mois: "Octobre", moisNum: 10, titre: "Préparation hivernale", priorite: "moderee", message: "Passage levain post-vendanges pour stimuler la vie microbienne du sol avant l'hiver. Favorise la décomposition des résidus de culture et prépare le sol pour la campagne suivante." },
+  { mois: "Novembre", moisNum: 11, titre: "Amendement organique", priorite: "optionnel", message: "Période idéale pour apporter des amendements organiques (compost, fumier). Le levain peut être associé pour accélérer la minéralisation." },
+  { mois: "Janvier", moisNum: 1, titre: "Analyse sol T0", priorite: "elevee", message: "Réaliser une analyse de sol avant le démarrage de la campagne. Comparer avec les résultats de la campagne précédente pour ajuster la stratégie levain." },
+  { mois: "Février", moisNum: 2, titre: "Préparation pré-débourrement", priorite: "elevee", message: "Préparer les solutions de levain pour la campagne. Vérifier le matériel de pulvérisation. Planifier le calendrier de passages selon les stades BBCH prévus." },
+  { mois: "Mars", moisNum: 3, titre: "Activation sol post-gel", priorite: "critique", message: "Premier passage levain de la saison pour réactiver la vie microbienne après l'hiver. Application au sol recommandée pour stimuler le réveil racinaire avant débourrement." },
 ];
 
 const PRIORITE_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
@@ -67,58 +76,95 @@ const PRIORITE_COLORS: Record<string, { bg: string; text: string; icon: string }
 };
 
 function RecommandationsStrategiques({ recos }: { recos: RecoData[] }) {
-  if (recos.length === 0) return null;
+  if (recos.length === 0 && RECOS_INTER_CAMPAGNE.length === 0) return null;
 
-  // Match each calendar entry with recommandations
-  const planning = CALENDRIER_VIGNE.map(cal => {
-    const [minStr, maxStr] = cal.bbch.split("-");
-    const min = parseInt(minStr, 10);
-    const max = parseInt(maxStr, 10);
-    const matched = recos.filter(r => {
-      const rMin = parseInt(r.bbch_min, 10);
-      const rMax = parseInt(r.bbch_max, 10);
-      return (rMin <= max && rMax >= min);
-    });
-    return { ...cal, recos: matched };
-  }).filter(p => p.recos.length > 0);
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  const currentYear = now.getFullYear();
+  const campagneYear = currentMonth >= 10 ? currentYear + 1 : currentYear;
 
-  if (planning.length === 0) return null;
+  // Filter calendar: only show current month and future
+  const planningCampagne = CALENDRIER_VIGNE
+    .map(cal => {
+      const [minStr, maxStr] = cal.bbch.split("-");
+      const min = parseInt(minStr, 10);
+      const max = parseInt(maxStr, 10);
+      const matched = recos.filter(r => {
+        const rMin = parseInt(r.bbch_min, 10);
+        const rMax = parseInt(r.bbch_max, 10);
+        return (rMin <= max && rMax >= min);
+      });
+      return { ...cal, recos: matched };
+    })
+    .filter(p => p.recos.length > 0)
+    .filter(p => p.moisNum >= currentMonth); // Hide past months
+
+  // Inter-campagne: show if we're past September (campagne terminée) or before April
+  const isInterCampagne = currentMonth >= 10 || currentMonth <= 3;
+  const interRecos = isInterCampagne
+    ? RECOS_INTER_CAMPAGNE.filter(r => r.moisNum >= currentMonth || (currentMonth >= 10 && r.moisNum <= 3))
+    : [];
+
+  if (planningCampagne.length === 0 && interRecos.length === 0) return null;
 
   return (
     <>
-      <h2 className="text-lg font-bold text-gray-800 mb-3">💡 Recommandations — Campagne 2026</h2>
-      <p className="text-xs text-gray-500 mb-4">Prévisionnel de traitements levain basé sur les stades BBCH. Ces recommandations sont indicatives.</p>
-      <div className="space-y-3 mb-6">
-        {planning.map((p, i) => (
-          <div key={i} className="glass rounded-2xl p-4 space-y-2">
-            {/* Header période */}
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-sm text-gray-800">📅 {p.date_approx}</div>
-                <div className="text-xs text-gray-500">BBCH {p.bbch} — {p.stade}</div>
-              </div>
-              <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{p.mois}</span>
-            </div>
-            {/* Recommandations pour cette période */}
-            {p.recos.map(r => {
-              const style = PRIORITE_COLORS[r.priorite] ?? PRIORITE_COLORS.optionnel;
-              return (
-                <div key={r.id} className={`${style.bg} border rounded-xl p-3 space-y-1`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-semibold ${style.text}`}>{style.icon} {r.type}</span>
-                    <span className={`text-[10px] font-bold ${style.text} bg-white/60 px-2 py-0.5 rounded-full`}>Priorité : {r.priorite}</span>
-                  </div>
-                  <p className="text-xs text-gray-700 leading-relaxed">{r.message}</p>
-                  <div className="text-[10px] text-gray-500">
-                    💧 Modalités suggérées : M1 (levain 1/4), M2 (levain 1/2) ou M6-M11 (levain + phyto) selon pression sanitaire
-                  </div>
+      <h2 className="text-lg font-bold text-gray-800 mb-3">💡 Recommandations — Campagne {campagneYear}</h2>
+      <p className="text-xs text-gray-500 mb-4">Prévisionnel basé sur les stades BBCH. Les périodes passées sont masquées automatiquement.</p>
+
+      {/* Inter-campagne (hiver) */}
+      {interRecos.length > 0 && (
+        <div className="space-y-3 mb-4">
+          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider">🌨️ Préparation campagne {campagneYear}</div>
+          {interRecos.map((r, i) => {
+            const style = PRIORITE_COLORS[r.priorite] ?? PRIORITE_COLORS.optionnel;
+            return (
+              <div key={i} className={`${style.bg} border rounded-xl p-3 space-y-1`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-semibold ${style.text}`}>{style.icon} {r.mois} — {r.titre}</span>
+                  <span className={`text-[10px] font-bold ${style.text} bg-white/60 px-2 py-0.5 rounded-full`}>{r.priorite}</span>
                 </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] text-gray-400 italic mb-6">ℹ️ Adapter les modalités et dilutions selon la pression mildiou observée et les conditions météo. Consulter l&apos;agronome pour les cas spécifiques.</p>
+                <p className="text-xs text-gray-700 leading-relaxed">{r.message}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Campagne en cours */}
+      {planningCampagne.length > 0 && (
+        <div className="space-y-3 mb-6">
+          {interRecos.length > 0 && <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">🌱 Campagne en cours</div>}
+          {planningCampagne.map((p, i) => (
+            <div key={i} className="glass rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm text-gray-800">📅 {p.date_approx}</div>
+                  <div className="text-xs text-gray-500">BBCH {p.bbch} — {p.stade}</div>
+                </div>
+                <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{p.mois}</span>
+              </div>
+              {p.recos.map(r => {
+                const style = PRIORITE_COLORS[r.priorite] ?? PRIORITE_COLORS.optionnel;
+                return (
+                  <div key={r.id} className={`${style.bg} border rounded-xl p-3 space-y-1`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-semibold ${style.text}`}>{style.icon} {r.type}</span>
+                      <span className={`text-[10px] font-bold ${style.text} bg-white/60 px-2 py-0.5 rounded-full`}>{r.priorite}</span>
+                    </div>
+                    <p className="text-xs text-gray-700 leading-relaxed">{r.message}</p>
+                    <div className="text-[10px] text-gray-500">
+                      💧 Modalités suggérées : M1 (levain 1/4), M2 (levain 1/2) ou M6-M11 (levain + phyto) selon pression sanitaire
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] text-gray-400 italic mb-6">ℹ️ Adapter selon la pression mildiou et les conditions météo. Consulter l&apos;agronome pour les cas spécifiques.</p>
     </>
   );
 }
