@@ -8,16 +8,16 @@
   --color-primary-light: #34d399;
   --color-accent: #f59e0b;
   --color-accent-light: #fbbf24;
-  --color-bg: #0f1419;
-  --color-card: #1a2332;
-  --color-text: #e8edf2;
-  --color-muted: #8899a6;
-  --color-border: #2d3d50;
+  --color-bg: #1e3a2f;
+  --color-card: #243d33;
+  --color-text: #f0f7f4;
+  --color-muted: #a3c4b5;
+  --color-border: #2f5244;
   --radius: 16px;
 }
 
 body {
-  background: #0f1419;
+  background: linear-gradient(160deg, #1a3328 0%, #1e3a2f 40%, #1b2f3a 100%);
   background-attachment: fixed;
   color: var(--color-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -28,12 +28,12 @@ body {
 
 /* Modern card style */
 .card {
-  @apply bg-[#1a2332]/90 backdrop-blur-sm rounded-2xl shadow-lg border border-[#2d3d50]/60;
+  @apply bg-[#243d33]/90 backdrop-blur-sm rounded-2xl shadow-lg border border-[#2f5244]/60;
 }
 
 /* Gradient text */
 .gradient-text {
-  @apply bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent;
 }
 
 /* Primary button */
@@ -135,7 +135,7 @@ html {
 
 /* Glassmorphism effect */
 .glass {
-  @apply bg-[#1a2332]/80 backdrop-blur-md border border-[#2d3d50]/60 shadow-lg;
+  @apply bg-[#243d33]/80 backdrop-blur-md border border-[#2f5244]/60 shadow-lg;
 }
 
 /* Subtle glow on focus */

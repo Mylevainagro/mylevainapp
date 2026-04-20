@@ -46,7 +46,7 @@ export function BottomNav() {
   }, [moreOpen]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#1a2332]/95 backdrop-blur-xl border-t border-[#2d3d50]/60 z-50 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#1a3328]/95 backdrop-blur-xl border-t border-[#2f5244]/60 z-50 safe-area-bottom">
       <div className="max-w-lg mx-auto flex justify-around py-1.5">
         {NAV_ITEMS.map((item) => {
           const active = item.exact
@@ -58,15 +58,15 @@ export function BottomNav() {
               href={item.href}
               className={`flex flex-col items-center py-1.5 px-3 rounded-2xl transition-all ${
                 active
-                  ? "text-emerald-400 bg-emerald-900/30 font-semibold"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? "text-emerald-300 bg-emerald-900/30 font-semibold"
+                  : "text-gray-400 hover:text-gray-200"
               }`}
             >
               <span className={`text-xl mb-0.5 transition-transform ${active ? "scale-110" : ""}`}>
                 {item.icon}
               </span>
               <span className="text-[10px] leading-tight">{item.label}</span>
-              {active && <div className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5" />}
+              {active && <div className="w-1 h-1 rounded-full bg-emerald-300 mt-0.5" />}
             </Link>
           );
         })}
@@ -78,19 +78,19 @@ export function BottomNav() {
             onClick={() => setMoreOpen((v) => !v)}
             className={`flex flex-col items-center py-1.5 px-3 rounded-2xl transition-all ${
               moreActive
-                ? "text-emerald-400 bg-emerald-900/30 font-semibold"
-                : "text-gray-500 hover:text-gray-300"
+                ? "text-emerald-300 bg-emerald-900/30 font-semibold"
+                : "text-gray-400 hover:text-gray-200"
             }`}
           >
             <span className={`text-xl mb-0.5 transition-transform ${moreOpen ? "rotate-45" : ""} ${moreActive ? "scale-110" : ""}`}>
               ➕
             </span>
             <span className="text-[10px] leading-tight">Plus</span>
-            {moreActive && <div className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5" />}
+            {moreActive && <div className="w-1 h-1 rounded-full bg-emerald-300 mt-0.5" />}
           </button>
 
           {moreOpen && (
-            <div className="absolute bottom-full right-0 mb-3 bg-[#1a2332] border border-[#2d3d50] rounded-2xl shadow-xl py-2 min-w-[180px] animate-slideDown">
+            <div className="absolute bottom-full right-0 mb-3 bg-[#243d33] border border-[#2f5244] rounded-2xl shadow-xl py-2 min-w-[180px] animate-slideDown">
               {allMoreItems.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
@@ -100,8 +100,8 @@ export function BottomNav() {
                     onClick={() => setMoreOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
                       active
-                        ? "text-emerald-400 bg-emerald-900/20 font-semibold"
-                        : "text-gray-300 hover:bg-[#2d3d50]/50"
+                        ? "text-emerald-300 bg-emerald-900/20 font-semibold"
+                        : "text-gray-300 hover:bg-[#2f5244]/50"
                     }`}
                   >
                     <span className="text-lg">{item.icon}</span>
