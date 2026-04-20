@@ -234,10 +234,18 @@ export default function ParcelleDetailPage() {
                           <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">📷 Photos</div>
                           <div className="grid grid-cols-3 gap-1.5">
                             {obsPhotos.map(ph => (
-                              <a key={ph.id} href={ph.url} target="_blank" rel="noopener noreferrer" className="block">
-                                <img src={ph.url} alt={ph.legende || ph.type} className="w-full h-20 object-cover rounded-lg" />
+                              <div key={ph.id} className="relative group">
+                                <a href={ph.url} target="_blank" rel="noopener noreferrer" className="block">
+                                  <img src={ph.url} alt={ph.legende || ph.type} className="w-full h-20 object-cover rounded-lg" />
+                                </a>
+                                <button type="button" onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!confirm("Supprimer cette photo ?")) return;
+                                  await supabase.from("photos").delete().eq("id", ph.id);
+                                  setPhotos(prev => prev.filter(p => p.id !== ph.id));
+                                }} className="absolute top-1 right-1 w-5 h-5 bg-red-600/80 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                 {ph.legende && <p className="text-[9px] text-gray-400 mt-0.5 truncate">{ph.legende}</p>}
-                              </a>
+                              </div>
                             ))}
                           </div>
                         </div>
