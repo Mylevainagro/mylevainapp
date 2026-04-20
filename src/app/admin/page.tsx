@@ -20,6 +20,7 @@ interface ProduitItem { id: string; code: string; label: string; type: string; o
 interface AppUserItem { id: string; email: string; nom: string; role: string; approved: boolean; created_at: string; last_login: string | null; }
 interface CultureItem { id: string; code: string; nom: string; actif: boolean; }
 interface BbchStadeItem { id: string; culture_id: string; code: string; label: string; description: string | null; ordre: number; actif: boolean; }
+interface RangModalite { rang: number; produit: string; dose: string; modalite_code: string; }
 
 const TYPE_EXPLOITATION = ["vignoble", "maraichage", "grande_culture", "verger", "serre", "mixte", "autre"] as const;
 const TYPE_CULTURE = ["vigne", "mais", "ble", "legumes", "fruitiers", "autre"] as const;
@@ -123,6 +124,7 @@ export default function AdminPage() {
   const [cultures, setCultures] = useState<CultureItem[]>([]);
   const [bbchStades, setBbchStades] = useState<BbchStadeItem[]>([]);
   const [bbchFilterCulture, setBbchFilterCulture] = useState("");
+  const [parcelleRangs, setParcelleRangs] = useState<RangModalite[]>([]);
   const [appUsers, setAppUsers] = useState<AppUserItem[]>([]);
   const [toast, setToast] = useState({ message: "", type: "success" as "success" | "error", visible: false });
   const hideToast = useCallback(() => setToast(t => ({ ...t, visible: false })), []);
@@ -174,12 +176,38 @@ export default function AdminPage() {
   async function deleteSite(id: string) { if (!confirm("Supprimer ce site et toutes ses parcelles ?")) return; await supabase.from("sites").delete().eq("id", id); setSites(s => s.filter(x => x.id !== id)); showToast("Site supprimé"); }
 
   // ---- CRUD Parcelles ----
+  async function openParcelleModal(data: any) {
+    setModal({ type: "parcelle", data });
+    // Load existing rangs if editing
+    if (data.id) {
+      const { data: rangsData } = await supabase.from("parcelle_rangs").select("rang, produit, dose, modalite_code").eq("parcelle_id", data.id).order("rang");
+      if (rangsData && rangsData.length > 0) {
+        setParcelleRangs(rangsData.map((r: any) => ({ rang: r.rang, produit: r.produit || "", dose: r.dose || "", modalite_code: r.modalite_code || "" })));
+      } else if (data.nb_rangs) {
+        setParcelleRangs(Array.from({ length: data.nb_rangs }, (_, i) => ({ rang: i + 1, produit: "", dose: "", modalite_code: "" })));
+      } else {
+        setParcelleRangs([]);
+      }
+    } else {
+      setParcelleRangs([]);
+    }
+  }
+
   async function saveParcelle() {
     setSaving(true); const d = modal?.data;
     const payload = { nom: d.nom, site_id: d.site_id, surface: d.surface || null, type_culture: d.type_culture || null, variete: d.variete || null, sol: d.sol || null, culture_id: d.culture_id || null, commentaire: d.commentaire || null, latitude: d.latitude || null, longitude: d.longitude || null, nb_rangs: d.nb_rangs || null, longueur: d.longueur || null, ecartement: d.ecartement || null };
+    let parcelleId = d.id;
     if (d.id) { await supabase.from("parcelles").update(payload).eq("id", d.id); showToast("Parcelle modifiée"); }
-    else { const { error } = await supabase.from("parcelles").insert(payload); if (error) showToast(error.message, "error"); else showToast("Parcelle ajoutée"); }
-    setSaving(false); setModal(null);
+    else { const { data: newP, error } = await supabase.from("parcelles").insert(payload).select("id").single(); if (error) { showToast(error.message, "error"); setSaving(false); setModal(null); return; } else { showToast("Parcelle ajoutée"); parcelleId = newP.id; } }
+    // Save rangs
+    if (parcelleId && parcelleRangs.length > 0) {
+      await supabase.from("parcelle_rangs").delete().eq("parcelle_id", parcelleId);
+      const rangRecords = parcelleRangs.filter(r => r.produit || r.dose || r.modalite_code).map(r => ({
+        parcelle_id: parcelleId, rang: r.rang, produit: r.produit || null, dose: r.dose || null, modalite_code: r.modalite_code || null,
+      }));
+      if (rangRecords.length > 0) await supabase.from("parcelle_rangs").insert(rangRecords);
+    }
+    setSaving(false); setModal(null); setParcelleRangs([]);
     const { data } = await supabase.from("parcelles").select("*").order("nom"); if (data) setParcelles(data);
   }
   async function deleteParcelle(id: string) { if (!confirm("Supprimer cette parcelle ?")) return; await supabase.from("parcelles").delete().eq("id", id); setParcelles(p => p.filter(x => x.id !== id)); showToast("Parcelle supprimée"); }
@@ -314,7 +342,7 @@ export default function AdminPage() {
       </AdminCard>
 
       {/* ======== PARCELLES ======== */}
-      <AdminCard title="🌿 Parcelles" onAdd={() => setModal({ type: "parcelle", data: { nom: "", site_id: sites[0]?.id || "", surface: null, type_culture: "", variete: "", sol: "" } })}>
+      <AdminCard title="🌿 Parcelles" onAdd={() => openParcelleModal({ nom: "", site_id: sites[0]?.id || "", surface: null, type_culture: "", variete: "", sol: "", nb_rangs: null })}>
         {parcelles.map(p => (
           <div key={p.id} className="flex items-center justify-between px-4 py-3">
             <div>
@@ -325,7 +353,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex gap-1.5">
-              <button onClick={() => setModal({ type: "parcelle", data: { ...p } })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg">✏️</button>
+              <button onClick={() => openParcelleModal({ ...p })} className="text-xs bg-gray-100 px-2.5 py-1.5 rounded-lg">✏️</button>
               <button onClick={() => deleteParcelle(p.id)} className="text-xs bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg">🗑</button>
             </div>
           </div>
@@ -463,6 +491,10 @@ export default function AdminPage() {
               if (nb && modal?.data?.longueur && modal?.data?.ecartement) {
                 updateModal("surface", Math.round(nb * modal.data.longueur * modal.data.ecartement / 10000 * 100) / 100);
               }
+              // Regenerate rangs
+              if (nb && nb > 0) {
+                setParcelleRangs(Array.from({ length: nb }, (_, i) => parcelleRangs[i] || { rang: i + 1, produit: "", dose: "", modalite_code: "" }));
+              }
             }} className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm" placeholder="7" />
           </div>
           <div>
@@ -497,6 +529,45 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        {/* Modalités par rang */}
+        {modal?.data?.nb_rangs > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">🌱 Modalités par rang</label>
+              <button type="button" onClick={() => {
+                const nb = modal?.data?.nb_rangs || 0;
+                setParcelleRangs(Array.from({ length: nb }, (_, i) => parcelleRangs[i] || { rang: i + 1, produit: "", dose: "", modalite_code: "" }));
+              }} className="text-[10px] text-emerald-600 font-medium">🔄 Regénérer</button>
+            </div>
+            {parcelleRangs.map((r, i) => (
+              <div key={r.rang} className="bg-gray-50 rounded-lg p-2 flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-lg shrink-0">R{r.rang}</span>
+                <select value={r.modalite_code} onChange={e => {
+                  const newRangs = [...parcelleRangs];
+                  newRangs[i] = { ...newRangs[i], modalite_code: e.target.value };
+                  // Auto-fill produit from modalite label
+                  const mod = modalites.find(m => m.code === e.target.value);
+                  if (mod) newRangs[i].produit = mod.label;
+                  setParcelleRangs(newRangs);
+                }} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs flex-1">
+                  <option value="">Modalité…</option>
+                  {modalites.map(m => <option key={m.id} value={m.code}>{m.code} — {m.label}</option>)}
+                </select>
+                <input value={r.produit} onChange={e => { const n = [...parcelleRangs]; n[i] = { ...n[i], produit: e.target.value }; setParcelleRangs(n); }}
+                  placeholder="Produit" className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs w-24" />
+                <input value={r.dose} onChange={e => { const n = [...parcelleRangs]; n[i] = { ...n[i], dose: e.target.value }; setParcelleRangs(n); }}
+                  placeholder="Dose" className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs w-20" />
+              </div>
+            ))}
+            {parcelleRangs.length === 0 && modal?.data?.nb_rangs > 0 && (
+              <button type="button" onClick={() => {
+                setParcelleRangs(Array.from({ length: modal?.data?.nb_rangs ?? 0 }, (_, i) => ({ rang: i + 1, produit: "", dose: "", modalite_code: "" })));
+              }} className="w-full border-2 border-dashed border-gray-300 rounded-lg py-2 text-xs text-gray-500 hover:border-emerald-400">
+                + Générer {modal?.data?.nb_rangs} rangs
+              </button>
+            )}
+          </div>
+        )}
         <label className="text-sm font-medium">Type de sol</label>
         <select value={modal?.data?.sol || ""} onChange={e => updateModal("sol", e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">Sélectionner…</option>
