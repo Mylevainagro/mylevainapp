@@ -291,18 +291,21 @@ export default function VignoblePage() {
         {parcelles.map((p) => {
           const parcellePlacettes = placettes.filter(pl => pl.parcelle_id === p.id);
           return (
-            <div key={p.id} className="glass rounded-2xl p-4 space-y-2">
-              <div>
-                <div className="font-medium text-gray-800">{p.nom}</div>
-                <div className="text-xs text-gray-500">
-                  {p.variete || "—"}
-                  {p.surface && ` · ${p.surface} ha`}
-                  {p.sol && ` · ${p.sol}`}
-                  {p.type_culture && ` · ${p.type_culture}`}
+            <Link key={p.id} href={`/parcelles/${p.id}`} className="block glass rounded-2xl p-4 space-y-2 active:scale-[0.98] transition-all hover:ring-2 hover:ring-emerald-400/30">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium text-gray-800">{p.nom}</div>
+                  <div className="text-xs text-gray-500">
+                    {p.variete || "—"}
+                    {p.surface && ` · ${p.surface} ha`}
+                    {p.sol && ` · ${p.sol}`}
+                    {p.type_culture && ` · ${p.type_culture}`}
+                  </div>
+                  {p.latitude && p.longitude && (
+                    <div className="text-[10px] text-gray-400">🌐 {p.latitude}, {p.longitude}</div>
+                  )}
                 </div>
-                {p.latitude && p.longitude && (
-                  <div className="text-[10px] text-gray-400">🌐 {p.latitude}, {p.longitude}</div>
-                )}
+                <span className="text-gray-300 text-lg">›</span>
               </div>
               <div className="flex gap-4 text-xs text-gray-500">
                 <span>📝 Obs : <strong className="text-gray-700">{formatDate(lastObsDates[p.id])}</strong></span>
@@ -320,8 +323,7 @@ export default function VignoblePage() {
                   </div>
                 </div>
               )}
-              <DernierTraitementCard parcelleId={p.id} />
-            </div>
+            </Link>
           );
         })}
         {parcelles.length === 0 && (
