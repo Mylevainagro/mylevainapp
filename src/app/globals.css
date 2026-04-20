@@ -3,46 +3,47 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #059669;
-  --color-primary-dark: #047857;
-  --color-primary-light: #10b981;
-  --color-accent: #d97706;
-  --color-accent-light: #f59e0b;
-  --color-bg: #f8faf9;
-  --color-card: #ffffff;
-  --color-text: #111827;
-  --color-muted: #6b7280;
-  --color-border: #e5e7eb;
+  --color-primary: #10b981;
+  --color-primary-dark: #059669;
+  --color-primary-light: #34d399;
+  --color-accent: #f59e0b;
+  --color-accent-light: #fbbf24;
+  --color-bg: #0f1419;
+  --color-card: #1a2332;
+  --color-text: #e8edf2;
+  --color-muted: #8899a6;
+  --color-border: #2d3d50;
   --radius: 16px;
 }
 
 body {
-  background: linear-gradient(135deg, #f0fdf4 0%, #f8faf9 40%, #fffbeb 100%);
+  background: #0f1419;
   background-attachment: fixed;
   color: var(--color-text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
   min-height: 100vh;
+  letter-spacing: -0.01em;
 }
 
 /* Modern card style */
 .card {
-  @apply bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/60;
+  @apply bg-[#1a2332]/90 backdrop-blur-sm rounded-2xl shadow-lg border border-[#2d3d50]/60;
 }
 
 /* Gradient text */
 .gradient-text {
-  @apply bg-gradient-to-r from-emerald-700 to-emerald-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent;
 }
 
 /* Primary button */
 .btn-primary {
-  @apply bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-emerald-200/50 hover:shadow-emerald-300/50 hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-50 transition-all active:scale-[0.98];
+  @apply bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-emerald-900/20 hover:shadow-emerald-800/30 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all active:scale-[0.98];
 }
 
 /* Secondary button */
 .btn-secondary {
-  @apply bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50 disabled:opacity-50 transition-all active:scale-[0.98];
+  @apply bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl py-4 font-semibold text-lg shadow-lg shadow-amber-900/20 hover:shadow-amber-800/30 disabled:opacity-50 transition-all active:scale-[0.98];
 }
 
 /* Loader bar animation */
@@ -134,12 +135,12 @@ html {
 
 /* Glassmorphism effect */
 .glass {
-  @apply bg-white/70 backdrop-blur-md border border-white/40;
+  @apply bg-[#1a2332]/80 backdrop-blur-md border border-[#2d3d50]/60 shadow-lg;
 }
 
 /* Subtle glow on focus */
 input:focus, select:focus, textarea:focus {
-  @apply ring-2 ring-emerald-500/20 border-emerald-400;
+  @apply ring-2 ring-emerald-500/30 border-emerald-500/50;
 }
 
 /* Safe area for bottom nav */
