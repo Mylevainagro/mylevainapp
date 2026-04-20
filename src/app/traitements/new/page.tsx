@@ -15,10 +15,10 @@ import { supabase } from "@/lib/supabase/client";
 import { RecommandationBbch } from "@/components/traitements/RecommandationBbch";
 
 interface VignobleItem { id: string; nom: string; }
-interface ParcelleItem { id: string; vignoble_id: string; site_id: string | null; nom: string; }
+interface ParcelleItem { id: string; vignoble_id: string; site_id: string | null; nom: string; culture_id: string | null; }
 interface ProtocoleOption { id: string; code: string; label: string; }
 interface ModaliteLevainOption { id: string; code: string; label: string; }
-interface BbchOption { id: string; code: string; label: string; }
+interface BbchOption { id: string; code: string; label: string; culture_id: string; }
 
 interface RangEntry {
   rang: string;
@@ -42,7 +42,7 @@ export default function NewTraitementPage() {
     async function load() {
       const [v, p, proto, modLev] = await Promise.all([
         supabase.from("sites").select("id, nom").order("nom"),
-        supabase.from("parcelles").select("id, vignoble_id, site_id, nom").order("nom"),
+        supabase.from("parcelles").select("id, vignoble_id, site_id, nom, culture_id").order("nom"),
         supabase.from("protocoles").select("id, code, label").eq("actif", true).order("ordre"),
         supabase.from("modalites_levain").select("id, code, label").eq("actif", true).order("ordre"),
       ]);
@@ -51,7 +51,7 @@ export default function NewTraitementPage() {
       if (proto.data) setProtocoleOptions(proto.data);
       if (modLev.data) setModaliteOptions(modLev.data);
       // Load BBCH stades
-      const { data: bbchData } = await supabase.from("bbch_stades").select("id, code, label").eq("actif", true).order("ordre");
+      const { data: bbchData } = await supabase.from("bbch_stades").select("id, code, label, culture_id").eq("actif", true).order("ordre");
       if (bbchData) setBbchOptions(bbchData);
     }
     load();
@@ -135,6 +135,12 @@ export default function NewTraitementPage() {
     const v = vignoblesList.find(vv => vv.nom === vignoble);
     return v && (p.site_id === v.id || p.vignoble_id === v.id);
   }) : [];
+
+  // Filter BBCH by culture of selected parcelle
+  const selectedParcelle = parcellesList.find(p => p.id === parcelleId);
+  const filteredBbch = selectedParcelle?.culture_id
+    ? bbchOptions.filter(b => b.culture_id === selectedParcelle.culture_id)
+    : bbchOptions;
 
   // Générer les rangs quand nbRangs change
   function genererRangs() {
@@ -257,7 +263,7 @@ export default function NewTraitementPage() {
             <select value={stadeBbchCode} onChange={e => setStadeBbchCode(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm">
               <option value="">Sélectionner un stade BBCH…</option>
-              {bbchOptions.map(b => <option key={b.id} value={b.code}>{b.code} — {b.label}</option>)}
+              {filteredBbch.map(b => <option key={b.id} value={b.code}>{b.code} — {b.label}</option>)}
             </select>
           </div>
 
