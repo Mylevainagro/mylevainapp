@@ -43,6 +43,7 @@ export default function ParcelleDetailPage() {
   const [traitements, setTraitements] = useState<TraitInfo[]>([]);
   const [analyses, setAnalyses] = useState<AnalyseInfo[]>([]);
   const [obsLimit, setObsLimit] = useState(3);
+  const [traitLimit, setTraitLimit] = useState(3);
   const [expandedObs, setExpandedObs] = useState<string | null>(null);
 
   useEffect(() => {
@@ -185,13 +186,13 @@ export default function ParcelleDetailPage() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold text-gray-800">💧 Derniers traitements</h2>
-          <Link href={`/traitements?parcelle=${id}`} className="text-[10px] text-emerald-600 font-medium">Voir tout →</Link>
+          <span className="text-[10px] text-gray-400">{traitements.length} au total</span>
         </div>
         {traitements.length === 0 ? (
           <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucun traitement</p>
         ) : (
           <div className="space-y-1.5">
-            {traitements.slice(0, 5).map(t => (
+            {traitements.slice(0, traitLimit).map(t => (
               <div key={t.id} className="glass rounded-xl p-3 space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-800">
@@ -203,11 +204,27 @@ export default function ParcelleDetailPage() {
                   </span>
                 </div>
                 {t.notes && <p className="text-[10px] text-gray-500 line-clamp-1">{t.notes}</p>}
-                <Link href={`/traitements/new?site=${siteId}&parcelle=${id}`} className="text-[10px] text-amber-700 font-medium hover:underline">
-                  🔄 Reprendre
-                </Link>
+                <div className="flex items-center gap-3">
+                  <Link href={`/traitements/new?site=${siteId}&parcelle=${id}`} className="text-[10px] text-amber-700 font-medium hover:underline">
+                    🔄 Reprendre
+                  </Link>
+                  <button type="button" onClick={async () => {
+                    if (!confirm("Supprimer ce traitement ?")) return;
+                    await supabase.from("traitement_rangs").delete().eq("traitement_id", t.id);
+                    await supabase.from("traitements").delete().eq("id", t.id);
+                    setTraitements(prev => prev.filter(x => x.id !== t.id));
+                  }} className="text-[10px] text-red-500 font-medium hover:underline">
+                    🗑 Supprimer
+                  </button>
+                </div>
               </div>
             ))}
+            {traitements.length > traitLimit && (
+              <button type="button" onClick={() => setTraitLimit(prev => prev + 5)}
+                className="w-full glass rounded-xl py-2.5 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors">
+                💧 Voir plus de traitements ({traitements.length - traitLimit} restants)
+              </button>
+            )}
           </div>
         )}
       </div>
