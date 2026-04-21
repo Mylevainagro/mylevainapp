@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 
 const NAV_ITEMS = [
   { href: "/", label: "Accueil", icon: "🏡", exact: true },
-  { href: "/observations/new", label: "Observation", icon: "📝", exact: true },
+  { href: "/observations", label: "Observation", icon: "📝", exact: false },
   { href: "/historique", label: "Historique", icon: "📋", exact: false },
   { href: "/traitements", label: "Traitement", icon: "💧", exact: false },
 ];
