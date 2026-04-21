@@ -2,240 +2,241 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useDemo } from "@/components/DemoProvider";
-import { DEMO_OBSERVATIONS, DEMO_MALADIES } from "@/lib/demo-data";
-import { Observation, MaladieObservation } from "@/lib/types";
-import { SelectField } from "@/components/ui/SelectField";
+import { DEMO_OBSERVATIONS, DEMO_TRAITEMENTS, DEMO_VIGNOBLES, DEMO_PARCELLES } from "@/lib/demo-data";
 import { ListSkeleton } from "@/components/Skeleton";
 
-function DetailRow({ label, value, unit }: { label: string; value: unknown; unit?: string }) {
-  if (value === null || value === undefined || value === "") return null;
-  return (
-    <div className="flex justify-between py-1 border-b border-gray-50 last:border-0">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className="text-xs font-medium text-gray-800">{String(value)}{unit ? ` ${unit}` : ""}</span>
-    </div>
-  );
+interface ObsItem { id: string; parcelle_id: string; date: string; stade_bbch: string | null; modalite: string; rang: number; commentaires: string | null; vigueur: number | null; }
+interface TraitItem { id: string; parcelle_id: string; date: string; stade: string | null; mode: string | null; nb_rangs: number | null; notes: string | null; }
+interface SiteMap { [id: string]: string }
+interface ParcelleMap { [id: string]: { nom: string; site_id: string } }
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function ObservationDetail({ obs, maladies }: { obs: Observation; maladies: MaladieObservation[] }) {
-  const typeLabels: Record<string, string> = { mildiou: 'Mildiou', oidium: 'Oïdium', botrytis: 'Botrytis', black_rot: 'Black Rot' };
-  const zoneLabels: Record<string, string> = { feuille: 'Feuille', grappe: 'Grappe' };
-
-  return (
-    <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 animate-fadeIn">
-      {/* Stade & Répétition */}
-      {(obs.stade_bbch || obs.repetition) && (
-        <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">🌱 Stade & Placette</div>
-          <DetailRow label="Stade BBCH" value={obs.stade_bbch} />
-          <DetailRow label="Répétition (placette)" value={obs.repetition} />
-        </div>
-      )}
-
-      {/* État plante */}
-      <div className="glass rounded-xl p-3">
-        <div className="text-xs font-semibold text-gray-600 mb-1.5">🌿 État de la plante</div>
-        <div className="grid grid-cols-2 gap-x-4">
-          <DetailRow label="Vigueur" value={obs.vigueur} unit="/5" />
-          <DetailRow label="Croissance" value={obs.croissance} unit="/5" />
-          <DetailRow label="Homogénéité" value={obs.homogeneite} unit="/5" />
-          <DetailRow label="Couleur feuilles" value={obs.couleur_feuilles} unit="/5" />
-          <DetailRow label="Turgescence" value={obs.turgescence} unit="/5" />
-        </div>
-      </div>
-
-      {/* Symptômes & Ravageurs */}
-      {(obs.brulures !== null || obs.necroses !== null || obs.deformations !== null || obs.escargots || obs.acariens) && (
-        <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">⚠️ Symptômes & Ravageurs</div>
-          <DetailRow label="Brûlures" value={obs.brulures} unit="/5" />
-          <DetailRow label="Nécroses" value={obs.necroses} unit="/5" />
-          <DetailRow label="Déformations" value={obs.deformations} unit="/5" />
-          {obs.escargots && <DetailRow label="Escargots" value="Oui 🐌" />}
-          {obs.acariens && <DetailRow label="Acariens" value="Oui 🕷️" />}
-        </div>
-      )}
-
-      {/* Maladies v2 */}
-      {maladies.length > 0 && (
-        <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">🦠 Maladies (sur 20 feuilles)</div>
-          {maladies.map((m, i) => (
-            <div key={i} className="bg-gray-50 rounded-lg p-2 mb-1.5 last:mb-0">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-medium text-gray-800">{typeLabels[m.type] ?? m.type} — {zoneLabels[m.zone] ?? m.zone}</span>
-              </div>
-              <div className="flex gap-3 text-[10px]">
-                <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">Fréq: {m.frequence_pct}%</span>
-                <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded">Intens: {m.intensite_pct}%</span>
-                <span className="text-gray-500">{m.nb_feuilles_atteintes}/20 · {m.surface_atteinte_pct}% surface</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Grappes & Rendement */}
-      {(obs.nb_grappes_par_cep !== null || obs.nombre_grappes !== null || obs.rendement_estime !== null) && (
-        <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1.5">🍇 Grappes & Rendement</div>
-          <DetailRow label="Nb grappes/cep" value={obs.nb_grappes_par_cep} />
-          <DetailRow label="Taille grappes" value={obs.taille_grappes} unit="/5" />
-          <DetailRow label="Homogénéité grappes" value={obs.homogeneite_grappes} unit="/5" />
-          <DetailRow label="Nombre grappes" value={obs.nombre_grappes} />
-          <DetailRow label="Poids moyen grappe" value={obs.poids_moyen_grappe} unit="g" />
-          <DetailRow label="Poids 100 baies" value={obs.poids_100_baies} unit="g" />
-          <DetailRow label="Rendement estimé" value={obs.rendement_estime} unit="kg/ha" />
-          <DetailRow label="Rendement réel" value={obs.rendement_reel} unit="kg/ha" />
-        </div>
-      )}
-
-      {/* Commentaires */}
-      {obs.commentaires && (
-        <div className="glass rounded-xl p-3">
-          <div className="text-xs font-semibold text-gray-600 mb-1">💬 Commentaires</div>
-          <p className="text-xs text-gray-700">{obs.commentaires}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function ObservationsPage() {
-  const router = useRouter();
+export default function HistoriquePage() {
   const { isDemo } = useDemo();
-  const [observations, setObservations] = useState<Observation[]>([]);
-  const [maladiesMap, setMaladiesMap] = useState<Record<string, MaladieObservation[]>>({});
   const [loading, setLoading] = useState(true);
-  const [filterRang, setFilterRang] = useState("");
-  const [filterMois, setFilterMois] = useState("");
+  const [observations, setObservations] = useState<ObsItem[]>([]);
+  const [traitements, setTraitements] = useState<TraitItem[]>([]);
+  const [siteNames, setSiteNames] = useState<SiteMap>({});
+  const [parcelleInfo, setParcelleInfo] = useState<ParcelleMap>({});
+  const [view, setView] = useState<"hub" | "observations" | "traitements">("hub");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isDemo) {
-      setObservations(DEMO_OBSERVATIONS);
-      // Build maladies map from demo data
-      const map: Record<string, MaladieObservation[]> = {};
-      for (const m of DEMO_MALADIES) {
-        if (!map[m.observation_id]) map[m.observation_id] = [];
-        map[m.observation_id].push(m);
-      }
-      setMaladiesMap(map);
+      setObservations(DEMO_OBSERVATIONS.slice(0, 20).map(o => ({ id: o.id, parcelle_id: o.parcelle_id, date: o.date, stade_bbch: o.stade_bbch, modalite: o.modalite, rang: o.rang, commentaires: o.commentaires, vigueur: o.vigueur })));
+      setTraitements(DEMO_TRAITEMENTS.slice(0, 20).map(t => ({ id: t.id, parcelle_id: t.parcelle_id, date: t.date, stade: t.stade, mode: t.mode, nb_rangs: t.nb_rangs, notes: t.notes })));
+      const sm: SiteMap = {};
+      for (const v of DEMO_VIGNOBLES) sm[v.id] = v.nom;
+      setSiteNames(sm);
+      const pm: ParcelleMap = {};
+      for (const p of DEMO_PARCELLES) pm[p.id] = { nom: p.nom, site_id: p.vignoble_id };
+      setParcelleInfo(pm);
       setLoading(false);
       return;
     }
     async function load() {
-      const [obsRes, malRes] = await Promise.all([
-        supabase.from("observations").select("*").order("date", { ascending: false }).limit(100),
-        supabase.from("maladies_observations").select("*"),
+      const [obsRes, traitRes, sRes, pRes] = await Promise.all([
+        supabase.from("observations").select("id, parcelle_id, date, stade_bbch, modalite, rang, commentaires, vigueur").order("date", { ascending: false }).limit(50),
+        supabase.from("traitements").select("id, parcelle_id, date, stade, mode, nb_rangs, notes").order("date", { ascending: false }).limit(50),
+        supabase.from("sites").select("id, nom"),
+        supabase.from("parcelles").select("id, nom, site_id, vignoble_id"),
       ]);
-      if (!obsRes.error && obsRes.data) setObservations(obsRes.data as Observation[]);
-      if (!malRes.error && malRes.data) {
-        const map: Record<string, MaladieObservation[]> = {};
-        for (const m of malRes.data as MaladieObservation[]) {
-          if (!map[m.observation_id]) map[m.observation_id] = [];
-          map[m.observation_id].push(m);
-        }
-        setMaladiesMap(map);
+      if (obsRes.data) setObservations(obsRes.data);
+      if (traitRes.data) setTraitements(traitRes.data);
+      const sm: SiteMap = {};
+      for (const s of sRes.data ?? []) sm[s.id] = s.nom;
+      setSiteNames(sm);
+      const pm: ParcelleMap = {};
+      for (const p of (pRes.data ?? []) as { id: string; nom: string; site_id: string | null; vignoble_id: string }[]) {
+        pm[p.id] = { nom: p.nom, site_id: p.site_id || p.vignoble_id };
       }
+      setParcelleInfo(pm);
       setLoading(false);
     }
     load();
   }, [isDemo]);
 
-  const filtered = observations.filter((o) => {
-    if (filterRang && o.rang !== Number(filterRang)) return false;
-    if (filterMois && o.mois !== filterMois) return false;
-    return true;
-  });
+  function getSiteName(parcelleId: string) { return siteNames[parcelleInfo[parcelleId]?.site_id] || "—"; }
+  function getParcelleName(parcelleId: string) { return parcelleInfo[parcelleId]?.nom || "—"; }
 
-  return (
-    <div>
-      <h1 className="text-xl font-bold gradient-text mb-4">📋 Historique</h1>
+  async function deleteObs(id: string) {
+    if (!confirm("Supprimer cette observation et ses données associées ?")) return;
+    await supabase.from("maladies_observations").delete().eq("observation_id", id);
+    await supabase.from("photos").delete().eq("observation_id", id);
+    await supabase.from("observations").delete().eq("id", id);
+    setObservations(prev => prev.filter(o => o.id !== id));
+  }
 
-      <div className="flex gap-3 mb-4">
-        <Link href="/observations/new" className="flex-1 btn-primary text-center text-sm !py-2.5 !text-sm">
-          📝 Nouvelle
-        </Link>
-        <Link href="/observations/batch" className="flex-1 glass text-center text-sm py-2.5 font-medium text-emerald-700 rounded-2xl">
-          📋 Saisie par lot
-        </Link>
-      </div>
+  async function deleteTrait(id: string) {
+    if (!confirm("Supprimer ce traitement ?")) return;
+    await supabase.from("traitement_rangs").delete().eq("traitement_id", id);
+    await supabase.from("traitements").delete().eq("id", id);
+    setTraitements(prev => prev.filter(t => t.id !== id));
+  }
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <SelectField label="Rang" value={filterRang} onChange={setFilterRang} options={["1","2","3","4","5","6","7"]} placeholder="Tous" />
-        <SelectField label="Mois" value={filterMois} onChange={setFilterMois} options={["mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"]} placeholder="Tous" />
-      </div>
+  if (loading) return <div className="pt-4"><ListSkeleton count={4} /></div>;
 
-      <p className="text-xs text-gray-400 mb-2">{filtered.length} observation{filtered.length !== 1 ? "s" : ""}</p>
+  // ===== HUB =====
+  if (view === "hub") {
+    return (
+      <div>
+        <h1 className="text-xl font-bold gradient-text mb-4">📋 Historique</h1>
 
-      {loading ? (
-        <ListSkeleton count={4} />
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-4xl mb-3">🌱</div>
-          <p className="text-gray-400 mb-4">Aucune observation pour le moment</p>
-          <Link href="/observations/new" className="inline-block btn-primary px-6 !py-3 !text-sm">
-            Créer la première observation →
-          </Link>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <button onClick={() => setView("observations")}
+            className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-2xl p-5 text-center font-medium shadow-lg active:scale-95 transition-all">
+            <div className="text-3xl mb-2">📝</div>
+            <div className="text-sm font-semibold">Observations</div>
+            <div className="text-xs opacity-80 mt-1">{observations.length} enregistrées</div>
+          </button>
+          <button onClick={() => setView("traitements")}
+            className="bg-gradient-to-br from-amber-500 to-amber-700 text-white rounded-2xl p-5 text-center font-medium shadow-lg active:scale-95 transition-all">
+            <div className="text-3xl mb-2">💧</div>
+            <div className="text-sm font-semibold">Traitements</div>
+            <div className="text-xs opacity-80 mt-1">{traitements.length} enregistrés</div>
+          </button>
         </div>
-      ) : (
+
+        {/* Aperçu 3 dernières obs */}
+        <h2 className="text-sm font-bold text-gray-800 mb-2">📝 Dernières observations</h2>
+        <div className="space-y-1.5 mb-4">
+          {observations.slice(0, 3).map(o => (
+            <button key={o.id} onClick={() => setView("observations")} className="w-full text-left glass rounded-xl p-3 active:scale-[0.98] transition-all">
+              <div className="flex justify-between items-center">
+                <div className="text-xs font-medium text-gray-800">{getSiteName(o.parcelle_id)} · {getParcelleName(o.parcelle_id)}</div>
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{o.modalite}</span>
+              </div>
+              <div className="text-[10px] text-gray-500 mt-0.5">{formatDate(o.date)}{o.stade_bbch && ` · BBCH ${o.stade_bbch}`} · R{o.rang}</div>
+            </button>
+          ))}
+          {observations.length === 0 && <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucune observation</p>}
+        </div>
+
+        {/* Aperçu 3 derniers traitements */}
+        <h2 className="text-sm font-bold text-gray-800 mb-2">💧 Derniers traitements</h2>
+        <div className="space-y-1.5">
+          {traitements.slice(0, 3).map(t => (
+            <button key={t.id} onClick={() => setView("traitements")} className="w-full text-left glass rounded-xl p-3 active:scale-[0.98] transition-all">
+              <div className="flex justify-between items-center">
+                <div className="text-xs font-medium text-gray-800">{getSiteName(t.parcelle_id)} · {getParcelleName(t.parcelle_id)}</div>
+                <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">{t.mode === "surface" ? "Surface" : `${t.nb_rangs || "?"} rangs`}</span>
+              </div>
+              <div className="text-[10px] text-gray-500 mt-0.5">{formatDate(t.date)}{t.stade && ` · Stade ${t.stade}`}</div>
+            </button>
+          ))}
+          {traitements.length === 0 && <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucun traitement</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // ===== OBSERVATIONS =====
+  if (view === "observations") {
+    return (
+      <div>
+        <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
+          <button onClick={() => setView("hub")} className="hover:text-emerald-600">📋 Historique</button>
+          <span>›</span>
+          <span className="text-gray-700 font-medium">Observations</span>
+        </nav>
+        <h1 className="text-xl font-bold gradient-text mb-4">📝 Historique Observations</h1>
+        <p className="text-xs text-gray-500 mb-3">{observations.length} observation{observations.length !== 1 ? "s" : ""}</p>
+
         <div className="space-y-2">
-          {filtered.map((obs) => {
-            const isExpanded = expandedId === obs.id;
+          {observations.map(o => {
+            const isExpanded = expandedId === o.id;
             return (
-              <div
-                key={obs.id}
-                className={`glass rounded-2xl p-4 transition-all ${isExpanded ? "ring-2 ring-emerald-400/30" : ""}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setExpandedId(isExpanded ? null : obs.id)}
-                  className="w-full text-left"
-                >
-                  <div className="flex justify-between items-start">
+              <div key={o.id} className={`glass rounded-xl overflow-hidden transition-all ${isExpanded ? "ring-2 ring-emerald-400/30" : ""}`}>
+                <button type="button" onClick={() => setExpandedId(isExpanded ? null : o.id)} className="w-full text-left p-3">
+                  <div className="flex justify-between items-center">
                     <div>
-                      <div className="font-medium text-sm">
-                        Rang {obs.rang} — <span className="text-emerald-700">{obs.modalite}</span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {new Date(obs.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                        {obs.heure && ` à ${obs.heure}`}
-                        {obs.stade_bbch && ` · BBCH ${obs.stade_bbch}`}
-                        {obs.repetition && ` · Placette ${obs.repetition}`}
-                      </div>
+                      <div className="text-xs font-medium text-gray-800">{getSiteName(o.parcelle_id)} · {getParcelleName(o.parcelle_id)}</div>
+                      <div className="text-[10px] text-gray-500 mt-0.5">{formatDate(o.date)}{o.stade_bbch && ` · BBCH ${o.stade_bbch}`} · R{o.rang}</div>
                     </div>
-                    <span className={`text-gray-400 text-sm transition-transform ${isExpanded ? "rotate-180" : ""}`}>
-                      ▾
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{o.modalite}</span>
+                      {o.vigueur != null && <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">V:{o.vigueur}/5</span>}
+                      <span className={`text-gray-400 text-xs transition-transform ${isExpanded ? "rotate-180" : ""}`}>▾</span>
+                    </div>
                   </div>
-                  {!isExpanded && obs.commentaires && (
-                    <p className="text-xs text-gray-400 mt-1.5 line-clamp-1">{obs.commentaires}</p>
-                  )}
                 </button>
-
-                {isExpanded && <ObservationDetail obs={obs} maladies={maladiesMap[obs.id] ?? []} />}
-
-                <div className="mt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/observations/new?duplicate=${obs.id}`);
-                    }}
-                    className="text-xs text-emerald-700 font-medium px-2 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
-                  >
-                    📋 Dupliquer
-                  </button>
-                </div>
+                {isExpanded && (
+                  <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-2 animate-fadeIn">
+                    <div className="glass rounded-lg p-2 text-xs space-y-1">
+                      <div className="flex justify-between"><span className="text-gray-500">Site</span><span className="font-medium">{getSiteName(o.parcelle_id)}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Parcelle</span><span className="font-medium">{getParcelleName(o.parcelle_id)}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Rang</span><span className="font-medium">R{o.rang}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Modalité</span><span className="font-medium">{o.modalite}</span></div>
+                      {o.stade_bbch && <div className="flex justify-between"><span className="text-gray-500">Stade BBCH</span><span className="font-medium">{o.stade_bbch}</span></div>}
+                      {o.vigueur != null && <div className="flex justify-between"><span className="text-gray-500">Vigueur</span><span className="font-medium">{o.vigueur}/5</span></div>}
+                    </div>
+                    {o.commentaires && <p className="text-xs text-gray-600">{o.commentaires}</p>}
+                    <div className="flex items-center gap-3 pt-1">
+                      <Link href={`/observations/new?duplicate=${o.id}`} className="text-[10px] text-emerald-700 font-medium hover:underline">📋 Dupliquer</Link>
+                      <button onClick={() => deleteObs(o.id)} className="text-[10px] text-red-500 font-medium hover:underline">🗑 Supprimer</button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // ===== TRAITEMENTS =====
+  return (
+    <div>
+      <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
+        <button onClick={() => setView("hub")} className="hover:text-emerald-600">📋 Historique</button>
+        <span>›</span>
+        <span className="text-gray-700 font-medium">Traitements</span>
+      </nav>
+      <h1 className="text-xl font-bold gradient-text mb-4">💧 Historique Traitements</h1>
+      <p className="text-xs text-gray-500 mb-3">{traitements.length} traitement{traitements.length !== 1 ? "s" : ""}</p>
+
+      <div className="space-y-2">
+        {traitements.map(t => {
+          const isExpanded = expandedId === t.id;
+          return (
+            <div key={t.id} className={`glass rounded-xl overflow-hidden transition-all ${isExpanded ? "ring-2 ring-amber-400/30" : ""}`}>
+              <button type="button" onClick={() => setExpandedId(isExpanded ? null : t.id)} className="w-full text-left p-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-xs font-medium text-gray-800">{getSiteName(t.parcelle_id)} · {getParcelleName(t.parcelle_id)}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{formatDate(t.date)}{t.stade && ` · Stade ${t.stade}`}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">{t.mode === "surface" ? "Surface" : `${t.nb_rangs || "?"} rangs`}</span>
+                    <span className={`text-gray-400 text-xs transition-transform ${isExpanded ? "rotate-180" : ""}`}>▾</span>
+                  </div>
+                </div>
+              </button>
+              {isExpanded && (
+                <div className="px-3 pb-3 border-t border-gray-100 pt-2 space-y-2 animate-fadeIn">
+                  <div className="glass rounded-lg p-2 text-xs space-y-1">
+                    <div className="flex justify-between"><span className="text-gray-500">Site</span><span className="font-medium">{getSiteName(t.parcelle_id)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Parcelle</span><span className="font-medium">{getParcelleName(t.parcelle_id)}</span></div>
+                    {t.stade && <div className="flex justify-between"><span className="text-gray-500">Stade</span><span className="font-medium">{t.stade}</span></div>}
+                    <div className="flex justify-between"><span className="text-gray-500">Mode</span><span className="font-medium">{t.mode === "surface" ? "Surface" : `${t.nb_rangs} rangs`}</span></div>
+                  </div>
+                  {t.notes && <p className="text-xs text-gray-600">{t.notes}</p>}
+                  <div className="flex items-center gap-3 pt-1">
+                    <Link href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Reprendre</Link>
+                    <button onClick={() => deleteTrait(t.id)} className="text-[10px] text-red-500 font-medium hover:underline">🗑 Supprimer</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
