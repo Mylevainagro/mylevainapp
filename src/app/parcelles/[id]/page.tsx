@@ -205,6 +205,9 @@ export default function ParcelleDetailPage() {
                 </div>
                 {t.notes && <p className="text-[10px] text-gray-500 line-clamp-1">{t.notes}</p>}
                 <div className="flex items-center gap-3">
+                  <Link href={`/traitements?parcelle=${id}`} className="text-[10px] text-blue-600 font-medium hover:underline">
+                    👁 Détail
+                  </Link>
                   <Link href={`/traitements/new?site=${siteId}&parcelle=${id}`} className="text-[10px] text-amber-700 font-medium hover:underline">
                     🔄 Reprendre
                   </Link>
@@ -298,6 +301,19 @@ export default function ParcelleDetailPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
+                        <button type="button" onClick={() => setExpandedObs(o.id)} className="text-[10px] text-blue-600 font-medium">👁 Détail</button>
+                        <Link href={`/observations/new?duplicate=${o.id}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Reprendre</Link>
+                        <button type="button" onClick={async () => {
+                          if (!confirm("Supprimer cette observation ?")) return;
+                          await supabase.from("maladies_observations").delete().eq("observation_id", o.id);
+                          await supabase.from("photos").delete().eq("observation_id", o.id);
+                          await supabase.from("observations").delete().eq("id", o.id);
+                          setObservations(prev => prev.filter(x => x.id !== o.id));
+                        }} className="text-[10px] text-red-500 font-medium hover:underline">🗑 Supprimer</button>
+                      </div>
                     </div>
                   )}
                 </div>
