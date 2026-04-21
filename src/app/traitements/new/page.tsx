@@ -20,11 +20,19 @@ interface RangTraitData {
   rang: number;
   modalite_code: string;
   temoin: boolean;
-  produit: string;
-  dose_lha: string; // dose prévue en L/ha
-  volume_prepare: number | null;
-  ph_bouillie: number | null;
-  volume_restant: number | null;
+  produit1: string;
+  dose1_lha: string;
+  produit2: string;
+  dose2_lha: string;
+  nb_produits: 1 | 2;
+  // Produit 1
+  p1_volume_prepare: number | null;
+  p1_ph_bouillie: number | null;
+  p1_volume_restant: number | null;
+  // Produit 2
+  p2_volume_prepare: number | null;
+  p2_ph_bouillie: number | null;
+  p2_volume_restant: number | null;
 }
 
 export default function NewTraitementPage() {
@@ -116,8 +124,11 @@ export default function NewTraitementPage() {
         setParcelleRangs(data);
         setRangTraitData(data.map(r => ({
           rang: r.rang, modalite_code: r.modalite_code || "", temoin: r.temoin || false,
-          produit: r.produit || "", dose_lha: r.dose || "",
-          volume_prepare: null, ph_bouillie: null, volume_restant: null,
+          produit1: r.produit || "", dose1_lha: r.dose || "",
+          produit2: r.produit2 || "", dose2_lha: r.dose2 || "",
+          nb_produits: (r.produit2 ? 2 : 1) as 1 | 2,
+          p1_volume_prepare: null, p1_ph_bouillie: null, p1_volume_restant: null,
+          p2_volume_prepare: null, p2_ph_bouillie: null, p2_volume_restant: null,
         })));
       } else {
         setParcelleRangs([]);
@@ -153,8 +164,11 @@ export default function NewTraitementPage() {
     // Save rang details
     const rangRecords = rangTraitData.filter(r => !r.temoin).map(r => ({
       traitement_id: traitData.id, rang: `R${r.rang}`, modalite_id: r.modalite_code,
-      dose: r.dose_lha || null,
-      commentaire: r.volume_prepare ? `Préparé: ${r.volume_prepare}L | pH: ${r.ph_bouillie ?? "?"} | Restant: ${r.volume_restant ?? "?"}L` : null,
+      dose: r.dose1_lha || null,
+      commentaire: [
+        r.p1_volume_prepare ? `P1: Préparé ${r.p1_volume_prepare}L | pH ${r.p1_ph_bouillie ?? "?"} | Restant ${r.p1_volume_restant ?? "?"}L` : "",
+        r.nb_produits === 2 && r.p2_volume_prepare ? `P2: Préparé ${r.p2_volume_prepare}L | pH ${r.p2_ph_bouillie ?? "?"} | Restant ${r.p2_volume_restant ?? "?"}L` : "",
+      ].filter(Boolean).join(" | ") || null,
     }));
     if (rangRecords.length > 0) await supabase.from("traitement_rangs").insert(rangRecords);
 
@@ -230,10 +244,7 @@ export default function NewTraitementPage() {
         {/* ===== 3. Paramètres globaux ===== */}
         <Section title="3. Paramètres globaux" icon="⚗️" defaultOpen={true}>
           <NumberField label="Volume de bouillie cible (L/ha)" value={volumeCible} onChange={setVolumeCible} step={10} />
-          <div className="grid grid-cols-2 gap-3">
-            <NumberField label="pH eau" value={phEau} onChange={setPhEau} step={0.1} />
-            <NumberField label="pH bouillie" value={phBouillieGlobal} onChange={setPhBouillieGlobal} step={0.1} />
-          </div>
+          <NumberField label="pH eau" value={phEau} onChange={setPhEau} step={0.1} />
           <SelectField label="Origine eau" value={origineEau} onChange={setOrigineEau} options={["Robinet", "Pluie", "Forage", "Autre"]} />
         </Section>
 
@@ -278,31 +289,54 @@ export default function NewTraitementPage() {
                     <span className="font-bold bg-gray-200 px-2 py-0.5 rounded">R{r.rang}</span> Témoin — pas de traitement
                   </div>
                 );
-                const volumeApplique = (r.volume_prepare && r.volume_restant != null) ? r.volume_prepare - r.volume_restant : null;
-                const dosageReel = (volumeApplique && surfaceRang) ? Math.round(volumeApplique / surfaceRang * 10) / 10 : null;
+                const p1Applied = (r.p1_volume_prepare && r.p1_volume_restant != null) ? r.p1_volume_prepare - r.p1_volume_restant : null;
+                const p1Dosage = (p1Applied && surfaceRang) ? Math.round(p1Applied / surfaceRang * 10) / 10 : null;
+                const p2Applied = (r.p2_volume_prepare && r.p2_volume_restant != null) ? r.p2_volume_prepare - r.p2_volume_restant : null;
+                const p2Dosage = (p2Applied && surfaceRang) ? Math.round(p2Applied / surfaceRang * 10) / 10 : null;
                 return (
                   <div key={r.rang} className="bg-white border border-gray-200 rounded-xl p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">R{r.rang}</span>
-                      <span className="text-xs font-medium text-gray-700">{r.modalite_code}</span>
-                      <span className="text-xs text-gray-500">· {r.produit}</span>
-                      {r.dose_lha && <span className="text-xs text-amber-700 font-medium">· {r.dose_lha}</span>}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">R{r.rang}</span>
+                        <span className="text-xs font-medium text-gray-700">{r.modalite_code}</span>
+                      </div>
+                      <select value={r.nb_produits} onChange={e => updateRangTrait(i, "nb_produits", Number(e.target.value))}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1">
+                        <option value={1}>1 produit</option>
+                        <option value={2}>2 produits</option>
+                      </select>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <NumberField label="Préparé (L)" value={r.volume_prepare} onChange={v => updateRangTrait(i, "volume_prepare", v)} step={0.5} />
-                      <NumberField label="pH bouillie" value={r.ph_bouillie} onChange={v => updateRangTrait(i, "ph_bouillie", v)} step={0.1} />
-                      <NumberField label="Restant (L)" value={r.volume_restant} onChange={v => updateRangTrait(i, "volume_restant", v)} step={0.5} />
+
+                    {/* Produit 1 */}
+                    <div className="bg-emerald-50/50 rounded-lg p-2 space-y-1.5">
+                      <div className="text-[10px] font-semibold text-emerald-700">🧪 {r.produit1 || "Produit 1"}{r.dose1_lha && ` — ${r.dose1_lha}`}</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <NumberField label="Préparé (L)" value={r.p1_volume_prepare} onChange={v => updateRangTrait(i, "p1_volume_prepare", v)} step={0.5} />
+                        <NumberField label="pH bouillie" value={r.p1_ph_bouillie} onChange={v => updateRangTrait(i, "p1_ph_bouillie", v)} step={0.1} />
+                        <NumberField label="Restant (L)" value={r.p1_volume_restant} onChange={v => updateRangTrait(i, "p1_volume_restant", v)} step={0.5} />
+                      </div>
+                      {p1Applied != null && (
+                        <div className="flex gap-2 text-[10px]">
+                          <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Appliqué : <strong>{p1Applied} L</strong></span>
+                          {p1Dosage != null && <span className={`px-2 py-0.5 rounded ${Math.abs(p1Dosage - parseFloat(r.dose1_lha || "0")) < 20 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>Dosage : <strong>{p1Dosage} L/ha</strong></span>}
+                        </div>
+                      )}
                     </div>
-                    {/* Calculs auto */}
-                    {volumeApplique != null && (
-                      <div className="flex gap-3 text-[10px] pt-1">
-                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg">
-                          Appliqué : <strong>{volumeApplique} L</strong>
-                        </span>
-                        {dosageReel != null && (
-                          <span className={`px-2 py-0.5 rounded-lg ${Math.abs(dosageReel - parseFloat(r.dose_lha || "0")) < 20 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-                            Dosage réel : <strong>{dosageReel} L/ha</strong>
-                          </span>
+
+                    {/* Produit 2 */}
+                    {r.nb_produits === 2 && (
+                      <div className="bg-amber-50/50 rounded-lg p-2 space-y-1.5">
+                        <div className="text-[10px] font-semibold text-amber-700">🧪 {r.produit2 || "Produit 2"}{r.dose2_lha && ` — ${r.dose2_lha}`}</div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <NumberField label="Préparé (L)" value={r.p2_volume_prepare} onChange={v => updateRangTrait(i, "p2_volume_prepare", v)} step={0.5} />
+                          <NumberField label="pH bouillie" value={r.p2_ph_bouillie} onChange={v => updateRangTrait(i, "p2_ph_bouillie", v)} step={0.1} />
+                          <NumberField label="Restant (L)" value={r.p2_volume_restant} onChange={v => updateRangTrait(i, "p2_volume_restant", v)} step={0.5} />
+                        </div>
+                        {p2Applied != null && (
+                          <div className="flex gap-2 text-[10px]">
+                            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Appliqué : <strong>{p2Applied} L</strong></span>
+                            {p2Dosage != null && <span className={`px-2 py-0.5 rounded ${Math.abs(p2Dosage - parseFloat(r.dose2_lha || "0")) < 20 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>Dosage : <strong>{p2Dosage} L/ha</strong></span>}
+                          </div>
                         )}
                       </div>
                     )}
