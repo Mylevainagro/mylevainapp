@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useDemo } from "@/components/DemoProvider";
 import { DEMO_TRAITEMENTS, DEMO_VIGNOBLES, DEMO_PARCELLES } from "@/lib/demo-data";
@@ -92,6 +93,8 @@ interface ParcelleMap { [id: string]: { nom: string; site_id: string } }
 
 export default function TraitementsPage() {
   const { isDemo } = useDemo();
+  const searchParams = useSearchParams();
+  const filterParcelleId = searchParams.get("parcelle") || "";
   const [traitements, setTraitements] = useState<Traitement[]>([]);
   const [siteNames, setSiteNames] = useState<SiteMap>({});
   const [parcelleInfo, setParcelleInfo] = useState<ParcelleMap>({});
@@ -136,9 +139,11 @@ export default function TraitementsPage() {
 
   // Filter by campagne
   const filtered = useMemo(() => {
-    if (!campagne) return traitements;
-    return traitements.filter(t => t.campagne === campagne || t.date?.startsWith(campagne));
-  }, [traitements, campagne]);
+    let result = traitements;
+    if (campagne) result = result.filter(t => t.campagne === campagne || t.date?.startsWith(campagne));
+    if (filterParcelleId) result = result.filter(t => t.parcelle_id === filterParcelleId);
+    return result;
+  }, [traitements, campagne, filterParcelleId]);
 
   // Deduplicate by date (group multi-rang into one entry)
   const grouped = useMemo(() => {
@@ -166,6 +171,17 @@ export default function TraitementsPage() {
 
   return (
     <div>
+      {/* Breadcrumb si filtré par parcelle */}
+      {filterParcelleId && (
+        <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
+          <Link href="/" className="hover:text-emerald-600">🏡 Accueil</Link>
+          <span>›</span>
+          <Link href={`/parcelles/${filterParcelleId}`} className="hover:text-emerald-600">Parcelle</Link>
+          <span>›</span>
+          <span className="text-gray-700 font-medium">Traitements</span>
+        </nav>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold gradient-text">💧 Traitements</h1>
@@ -236,7 +252,7 @@ export default function TraitementsPage() {
                     <TraitementDetail t={t} />
                     <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
                       <Link
-                        href={`/traitements/new?from=${t.id}`}
+                        href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}`}
                         className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors"
                       >
                         🔄 Reprendre ce traitement

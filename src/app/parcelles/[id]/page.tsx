@@ -181,6 +181,37 @@ export default function ParcelleDetailPage() {
         </div>
       )}
 
+      {/* Traitements — AVANT observations */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-bold text-gray-800">💧 Derniers traitements</h2>
+          <Link href={`/traitements?parcelle=${id}`} className="text-[10px] text-emerald-600 font-medium">Voir tout →</Link>
+        </div>
+        {traitements.length === 0 ? (
+          <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucun traitement</p>
+        ) : (
+          <div className="space-y-1.5">
+            {traitements.slice(0, 5).map(t => (
+              <div key={t.id} className="glass rounded-xl p-3 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-medium text-gray-800">
+                    {new Date(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                    {t.stade && ` · Stade ${t.stade}`}
+                  </span>
+                  <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
+                    {t.mode === "surface" ? "Surface" : `${t.nb_rangs || "?"} rangs`}
+                  </span>
+                </div>
+                {t.notes && <p className="text-[10px] text-gray-500 line-clamp-1">{t.notes}</p>}
+                <Link href={`/traitements/new?site=${siteId}&parcelle=${id}`} className="text-[10px] text-amber-700 font-medium hover:underline">
+                  🔄 Reprendre
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Observations */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
@@ -263,34 +294,6 @@ export default function ParcelleDetailPage() {
                 📝 Charger plus d&apos;observations ({observations.length - obsLimit} restantes)
               </button>
             )}
-          </div>
-        )}
-      </div>
-
-      {/* Traitements */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-gray-800">💧 Derniers traitements</h2>
-          <Link href="/traitements" className="text-[10px] text-emerald-600 font-medium">Voir tout →</Link>
-        </div>
-        {traitements.length === 0 ? (
-          <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucun traitement</p>
-        ) : (
-          <div className="space-y-1.5">
-            {traitements.slice(0, 5).map(t => (
-              <div key={t.id} className="glass rounded-xl p-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-800">
-                    {new Date(t.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                    {t.stade && ` · Stade ${t.stade}`}
-                  </span>
-                  <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
-                    {t.mode === "surface" ? "Surface" : `${t.nb_rangs || "?"} rangs`}
-                  </span>
-                </div>
-                {t.notes && <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{t.notes}</p>}
-              </div>
-            ))}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Section } from "@/components/ui/Section";
 import { SelectField } from "@/components/ui/SelectField";
 import { NumberField } from "@/components/ui/NumberField";
@@ -37,8 +37,11 @@ interface RangTraitData {
 
 export default function NewTraitementPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const today = new Date().toISOString().split("T")[0];
   const now = new Date().toTimeString().slice(0, 5);
+  const prefillSite = searchParams.get("site") || "";
+  const prefillParcelle = searchParams.get("parcelle") || "";
 
   const [sitesList, setSitesList] = useState<SiteItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
@@ -64,8 +67,8 @@ export default function NewTraitementPage() {
   const hideToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
 
   // 1. Identification
-  const [siteId, setSiteId] = useState("");
-  const [parcelleId, setParcelleId] = useState("");
+  const [siteId, setSiteId] = useState(prefillSite);
+  const [parcelleId, setParcelleId] = useState(prefillParcelle);
   const [date, setDate] = useState(today);
   const [stadeBbch, setStadeBbch] = useState("");
   const [operateur, setOperateur] = useState("");
