@@ -106,13 +106,13 @@ export default function HistoriquePage() {
         <h2 className="text-sm font-bold text-gray-800 mb-2">📝 Dernières observations</h2>
         <div className="space-y-1.5 mb-4">
           {observations.slice(0, 3).map(o => (
-            <button key={o.id} onClick={() => setView("observations")} className="w-full text-left glass rounded-xl p-3 active:scale-[0.98] transition-all">
+            <Link key={o.id} href={`/parcelles/${o.parcelle_id}`} className="block glass rounded-xl p-3 active:scale-[0.98] transition-all hover:ring-2 hover:ring-emerald-400/30">
               <div className="flex justify-between items-center">
                 <div className="text-xs font-medium text-gray-800">{getSiteName(o.parcelle_id)} · {getParcelleName(o.parcelle_id)}</div>
                 <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{o.modalite}</span>
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">{formatDate(o.date)}{o.stade_bbch && ` · BBCH ${o.stade_bbch}`} · R{o.rang}</div>
-            </button>
+            </Link>
           ))}
           {observations.length === 0 && <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucune observation</p>}
         </div>
@@ -121,13 +121,13 @@ export default function HistoriquePage() {
         <h2 className="text-sm font-bold text-gray-800 mb-2">💧 Derniers traitements</h2>
         <div className="space-y-1.5">
           {traitements.slice(0, 3).map(t => (
-            <button key={t.id} onClick={() => setView("traitements")} className="w-full text-left glass rounded-xl p-3 active:scale-[0.98] transition-all">
+            <Link key={t.id} href={`/parcelles/${t.parcelle_id}`} className="block glass rounded-xl p-3 active:scale-[0.98] transition-all hover:ring-2 hover:ring-amber-400/30">
               <div className="flex justify-between items-center">
                 <div className="text-xs font-medium text-gray-800">{getSiteName(t.parcelle_id)} · {getParcelleName(t.parcelle_id)}</div>
                 <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">{t.mode === "surface" ? "Surface" : `${t.nb_rangs || "?"} rangs`}</span>
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">{formatDate(t.date)}{t.stade && ` · Stade ${t.stade}`}</div>
-            </button>
+            </Link>
           ))}
           {traitements.length === 0 && <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucun traitement</p>}
         </div>
