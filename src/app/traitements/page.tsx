@@ -197,7 +197,7 @@ export default function TraitementsPage() {
       </Link>
 
       {/* Historique récent */}
-      <h2 className="text-sm font-semibold text-gray-600 mb-2">Historique récent</h2>
+      <h2 className="text-sm font-semibold text-gray-600 mb-2">Historique des derniers traitements</h2>
       <p className="text-xs text-gray-400 mb-3">{grouped.length} traitement{grouped.length !== 1 ? "s" : ""} · Campagne {campagne}</p>
 
       {loading ? (
@@ -250,13 +250,23 @@ export default function TraitementsPage() {
                 {isExpanded && (
                   <>
                     <TraitementDetail t={t} />
-                    <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-                      <Link
-                        href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}`}
-                        className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors"
-                      >
-                        🔄 Reprendre ce traitement
+                    <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-3 justify-end">
+                      <Link href={`/parcelles/${t.parcelle_id}`}
+                        className="text-xs text-blue-600 font-medium px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+                        👁 Voir détail
                       </Link>
+                      <Link href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}`}
+                        className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors">
+                        🔄 Reprendre
+                      </Link>
+                      <button onClick={async () => {
+                        if (!confirm("Supprimer ce traitement ?")) return;
+                        await supabase.from("traitement_rangs").delete().eq("traitement_id", t.id);
+                        await supabase.from("traitements").delete().eq("id", t.id);
+                        setTraitements(prev => prev.filter(x => x.id !== t.id));
+                      }} className="text-xs text-red-500 font-medium px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition-colors">
+                        🗑 Supprimer
+                      </button>
                     </div>
                   </>
                 )}
