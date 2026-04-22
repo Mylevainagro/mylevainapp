@@ -251,9 +251,13 @@ export default function TraitementsPage() {
                   <>
                     <TraitementDetail t={t} />
                     <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-3 justify-end">
-                      <Link href={`/parcelles/${t.parcelle_id}`}
+                      <Link href={`/traitements/${t.id}`}
                         className="text-xs text-blue-600 font-medium px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
                         👁 Voir détail
+                      </Link>
+                      <Link href={`/parcelles/${t.parcelle_id}`}
+                        className="text-xs text-gray-600 font-medium px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        📍 Parcelle
                       </Link>
                       <Link href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}`}
                         className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors">

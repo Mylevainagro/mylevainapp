@@ -157,7 +157,8 @@ export default function ObservationsPage() {
                     </div>
                     {o.commentaires && <p className="text-xs text-gray-600">{o.commentaires}</p>}
                     <div className="flex items-center gap-3 pt-1">
-                      <Link href={`/parcelles/${o.parcelle_id}`} className="text-xs text-blue-600 font-medium px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100">👁 Voir détail</Link>
+                      <Link href={`/parcelles/${o.parcelle_id}`} className="text-xs text-blue-600 font-medium px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100">👁 Voir parcelle</Link>
+                      <Link href={`/observations/${o.id}`} className="text-xs text-gray-600 font-medium px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100">📄 Détail</Link>
                       <Link href={`/observations/new?duplicate=${o.id}`} className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100">🔄 Reprendre</Link>
                       <button onClick={async () => {
                         if (!confirm("Supprimer cette observation ?")) return;
