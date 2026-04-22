@@ -8,6 +8,7 @@ import { ListSkeleton } from "@/components/Skeleton";
 
 interface TraitDetail { id: string; parcelle_id: string; date: string; stade: string | null; mode: string | null; nb_rangs: number | null; surface_ha: number | null; operateur: string | null; temperature: number | null; humidite: number | null; couvert: string | null; type_application: string | null; prelevement_sol: boolean | null; volume_bouillie_l: number | null; ph_eau: number | null; ph_bouillie: number | null; origine_eau: string | null; notes: string | null; heure: string | null; latitude: number | null; longitude: number | null; }
 interface RangDetail { rang: string; modalite_id: string; dose: string | null; commentaire: string | null; }
+interface ParcelleRangInfo { rang: number; modalite_code: string | null; produit: string | null; dose: string | null; produit2: string | null; dose2: string | null; temoin: boolean; }
 
 function Row({ label, value, unit }: { label: string; value: unknown; unit?: string }) {
   if (value === null || value === undefined || value === "") return null;
@@ -22,6 +23,7 @@ export default function TraitementDetailPage() {
   const [loading, setLoading] = useState(true);
   const [trait, setTrait] = useState<TraitDetail | null>(null);
   const [rangs, setRangs] = useState<RangDetail[]>([]);
+  const [parcelleRangs, setParcelleRangs] = useState<ParcelleRangInfo[]>([]);
   const [siteName, setSiteName] = useState("");
   const [parcelleName, setParcelleName] = useState("");
   const [siteId, setSiteId] = useState("");
@@ -34,6 +36,9 @@ export default function TraitementDetailPage() {
       // Rangs
       const { data: rData } = await supabase.from("traitement_rangs").select("rang, modalite_id, dose, commentaire").eq("traitement_id", id).order("rang");
       if (rData) setRangs(rData);
+      // Parcelle rangs (dilution info)
+      const { data: prData } = await supabase.from("parcelle_rangs").select("rang, modalite_code, produit, dose, produit2, dose2, temoin").eq("parcelle_id", t.parcelle_id).order("rang");
+      if (prData) setParcelleRangs(prData);
       // Parcelle + site
       const { data: p } = await supabase.from("parcelles").select("nom, site_id, vignoble_id").eq("id", t.parcelle_id).single();
       if (p) { setParcelleName(p.nom); const sid = p.site_id || p.vignoble_id; setSiteId(sid || ""); if (sid) { const { data: s } = await supabase.from("sites").select("nom").eq("id", sid).single(); if (s) setSiteName(s.nom); } }
@@ -90,16 +95,22 @@ export default function TraitementDetailPage() {
         <div className="mb-4">
           <h2 className="text-sm font-bold text-gray-800 mb-2">🌱 Détail par rang</h2>
           <div className="space-y-1.5">
-            {rangs.map(r => (
-              <div key={r.rang} className="glass rounded-xl p-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">{r.rang}</span>
-                  <span className="text-xs font-medium text-gray-700">{r.modalite_id}</span>
-                  {r.dose && <span className="text-xs text-amber-700">· {r.dose}</span>}
+            {rangs.map(r => {
+              const rangNum = parseInt(r.rang.replace("R", ""), 10);
+              const pr = parcelleRangs.find(p => p.rang === rangNum);
+              return (
+                <div key={r.rang} className="glass rounded-xl p-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">{r.rang}</span>
+                    <span className="text-xs font-medium text-gray-700">{r.modalite_id}</span>
+                    {r.dose && <span className="text-xs text-amber-700">· {r.dose}</span>}
+                    {pr?.produit && <span className="text-[10px] text-gray-500">· {pr.produit}{pr.dose && ` (${pr.dose})`}</span>}
+                    {pr?.produit2 && <span className="text-[10px] text-gray-500">· {pr.produit2}{pr.dose2 && ` (${pr.dose2})`}</span>}
+                  </div>
+                  {r.commentaire && <p className="text-[10px] text-gray-500 mt-1 ml-8">{r.commentaire}</p>}
                 </div>
-                {r.commentaire && <p className="text-[10px] text-gray-500 mt-1 ml-8">{r.commentaire}</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

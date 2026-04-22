@@ -135,26 +135,26 @@ export function PDFLaboImporter() {
     setEditedValues({});
 
     try {
-      // Read file as text via pdf-parse
+      // Try to parse PDF text
       const arrayBuffer = await selected.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      // eslint-disable-next-line
       const pdfParseModule = await import("pdf-parse") as any;
       const pdfParse = pdfParseModule.default ?? pdfParseModule;
       const pdfData = await pdfParse(buffer);
       const parsed = parseLaboText(pdfData.text, selected.name);
       setResult(parsed);
-
-      // Pre-fill editable values
       const initial: Record<string, string> = {};
       for (const v of parsed.valeurs) {
         initial[v.champ] = v.valeur !== null ? String(v.valeur) : "";
       }
       setEditedValues(initial);
-    } catch (err) {
+    } catch {
+      // Parsing failed — still allow upload as PDF-only (no extracted values)
+      setResult({ valeurs: [], texte_brut: "", fichier_nom: selected.name });
+      setEditedValues({});
       setToast({
-        message: "Erreur lors du parsing du PDF",
-        type: "error",
+        message: "Extraction automatique impossible — vous pouvez quand même stocker le PDF et saisir les valeurs manuellement",
+        type: "success",
         visible: true,
       });
     } finally {

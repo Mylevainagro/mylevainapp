@@ -332,31 +332,39 @@ export default function ParcelleDetailPage() {
       </div>
 
       {/* Analyses sol */}
-      {analyses.length > 0 && (
-        <div className="mb-4">
-          <h2 className="text-sm font-bold text-gray-800 mb-2">🧪 Analyses de sol</h2>
+      <div className="mb-4">
+        <h2 className="text-sm font-bold text-gray-800 mb-2">🧪 Analyses de sol</h2>
+        {analyses.length === 0 ? (
+          <p className="text-xs text-gray-400 glass rounded-xl p-3">Aucune analyse de sol</p>
+        ) : (
           <div className="space-y-1.5">
             {analyses.map(a => (
-              <div key={a.id} className="glass rounded-xl p-3">
+              <div key={a.id} className="glass rounded-xl p-3 space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-800">
                     {a.phase} — {new Date(a.date_prelevement).toLocaleDateString("fr-FR")}
                     {a.laboratoire && ` · ${a.laboratoire}`}
                   </span>
-                  {a.fichier_pdf_url && (
-                    <a href={a.fichier_pdf_url} target="_blank" rel="noopener noreferrer"
-                      className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium">📄 PDF</a>
-                  )}
                 </div>
-                <div className="flex gap-3 mt-1 text-[10px] text-gray-500">
+                <div className="flex gap-3 text-[10px] text-gray-500">
                   {a.ph != null && <span>pH {a.ph}</span>}
                   {a.matiere_organique_pct != null && <span>MO {a.matiere_organique_pct}%</span>}
+                </div>
+                <div className="flex items-center gap-3 pt-1">
+                  {a.fichier_pdf_url && (
+                    <a href={a.fichier_pdf_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-medium hover:underline">👁 Voir PDF</a>
+                  )}
+                  <button onClick={async () => {
+                    if (!confirm("Supprimer cette analyse ?")) return;
+                    await supabase.from("analyses_sol").delete().eq("id", a.id);
+                    setAnalyses(prev => prev.filter(x => x.id !== a.id));
+                  }} className="text-[10px] text-red-500 font-medium hover:underline">🗑 Supprimer</button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Actions */}
       <div className="grid grid-cols-2 gap-3 mt-4">
