@@ -117,49 +117,20 @@ export function PDFLaboImporter() {
       })
     : [];
 
-  // Handle file selection and parsing
+  // Handle file selection — skip parsing (pdf-parse incompatible navigateur), just prepare for upload
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (!selected) return;
     if (selected.type !== "application/pdf") {
-      setToast({
-        message: "Seuls les fichiers PDF sont acceptés",
-        type: "error",
-        visible: true,
-      });
+      setToast({ message: "Seuls les fichiers PDF sont acceptés", type: "error", visible: true });
       return;
     }
     setFile(selected);
-    setParsing(true);
-    setResult(null);
+    setParsing(false);
+    // Set empty result to enable the submit form
+    setResult({ valeurs: [], texte_brut: "", fichier_nom: selected.name });
     setEditedValues({});
-
-    try {
-      // Try to parse PDF text
-      const arrayBuffer = await selected.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const pdfParseModule = await import("pdf-parse") as any;
-      const pdfParse = pdfParseModule.default ?? pdfParseModule;
-      const pdfData = await pdfParse(buffer);
-      const parsed = parseLaboText(pdfData.text, selected.name);
-      setResult(parsed);
-      const initial: Record<string, string> = {};
-      for (const v of parsed.valeurs) {
-        initial[v.champ] = v.valeur !== null ? String(v.valeur) : "";
-      }
-      setEditedValues(initial);
-    } catch {
-      // Parsing failed — still allow upload as PDF-only (no extracted values)
-      setResult({ valeurs: [], texte_brut: "", fichier_nom: selected.name });
-      setEditedValues({});
-      setToast({
-        message: "Extraction automatique impossible — vous pouvez quand même stocker le PDF et saisir les valeurs manuellement",
-        type: "success",
-        visible: true,
-      });
-    } finally {
-      setParsing(false);
-    }
+    setToast({ message: `PDF "${selected.name}" prêt — sélectionnez la parcelle et enregistrez`, type: "success", visible: true });
   }
 
   function handleValueChange(champ: string, val: string) {
