@@ -1,24 +1,8 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const body = await req.json();
-    const { reportId } = body;
+    const reportId = 'dc17daf7-2d84-46fe-98cb-06666587099a';
 
-    if (!reportId) {
-      return NextResponse.json(
-        { error: 'reportId manquant' },
-        { status: 400 }
-      );
-    }
-
-    // 1. Vérifier que le rapport existe
+    // vérifier que le rapport existe
     const { data: report, error: reportError } = await supabase
       .from('soil_reports')
       .select('*')
@@ -27,12 +11,11 @@ export async function POST(req: Request) {
 
     if (reportError || !report) {
       return NextResponse.json(
-        { error: 'Rapport introuvable' },
+        { error: 'Rapport introuvable avec ce reportId' },
         { status: 404 }
       );
     }
 
-    // 2. DONNÉES TEST (simule extraction du PDF)
     const extractedReport = {
       laboratory_identifier: '870-2025-00043994',
       laboratory_name: 'Eurofins Galys Blois',
@@ -75,7 +58,6 @@ export async function POST(req: Request) {
       ratio_cao_mgo: 4.41
     };
 
-    // 3. Mettre à jour soil_reports
     const { error: updateError } = await supabase
       .from('soil_reports')
       .update(extractedReport)
@@ -88,7 +70,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Insérer mesures
     const { error: measureError } = await supabase
       .from('soil_measurements')
       .insert(extractedMeasurements);
@@ -100,7 +81,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Insérer ratios
     const { error: ratioError } = await supabase
       .from('soil_ratios')
       .insert(extractedRatios);
@@ -114,10 +94,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Insertion OK',
+      message: 'Insertion OK via GET',
       reportId
     });
-
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Erreur serveur' },
