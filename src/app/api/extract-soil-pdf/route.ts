@@ -30,13 +30,20 @@ export async function GET() {
     }
 
     // 📥 1. Télécharger le PDF
-    const { data: file } = await supabase.storage
-      .from('pdf-reports')
-      .download(report.storage_path);
+const { data: file, error: downloadError } = await supabase.storage
+  .from('pdf-reports')
+  .download(report.storage_path);
 
-    if (!file) {
-      return NextResponse.json({ error: 'PDF introuvable' }, { status: 500 });
-    }
+if (downloadError || !file) {
+  return NextResponse.json(
+    {
+      error: 'PDF introuvable',
+      storage_path: report.storage_path,
+      supabase_error: downloadError?.message || null
+    },
+    { status: 500 }
+  );
+}
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
