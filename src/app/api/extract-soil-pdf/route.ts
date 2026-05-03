@@ -48,11 +48,11 @@ if (downloadError || !file) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // 📄 2. Lire le texte du PDF
-    const pdfParseModule: any = await import('pdf-parse');
-    const pdfParse = pdfParseModule.default || pdfParseModule;
+   const pdfParseModule: any = await import('pdf-parse/lib/pdf-parse.js');
+   const pdfParse = pdfParseModule.default || pdfParseModule;
 
-    const data = await pdfParse(buffer);
-    const text = data.text;
+   const data = await pdfParse(buffer);
+   const text = data.text;
 
     console.log('PDF TEXT:', text);
 
