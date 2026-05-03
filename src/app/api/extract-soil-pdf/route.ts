@@ -84,7 +84,7 @@ if (downloadError || !file) {
     mo,
     cec
   },
-  textPreview: text.slice(0, 3000)
+  textPreview: text.slice(3000, 9000)
 });
 
   } catch (error: any) {
