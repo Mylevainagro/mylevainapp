@@ -57,22 +57,41 @@ if (downloadError || !file) {
     console.log('PDF TEXT:', text);
 
     // 🔍 3. Extraction des données
-    const ph = extractValue(text, 'pH');
-    const cuivre = extractValue(text, 'Cuivre');
-    const manganese = extractValue(text, 'Manganèse');
-    const mo = extractValue(text, 'MO');
-    const cec = extractValue(text, 'CEC');
+  const ph = null;
+
+const cuivreMatch = text.match(/cuivre très élevée\s*\(?\s*([0-9]+[.,]?[0-9]*)\s*mg\/kg/i);
+const cuivre = cuivreMatch ? parseFloat(cuivreMatch[1].replace(',', '.')) : null;
+
+const moMatch = text.match(/MO\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
+const mo = moMatch ? parseFloat(moMatch[1].replace(',', '.')) : null;
+
+const cecMatch = text.match(/CEC moyenne de votre sol\s*\(?\s*([0-9]+[.,]?[0-9]*)\s*meq\/kg/i);
+const cec = cecMatch ? parseFloat(cecMatch[1].replace(',', '.')) : null;
+
+const manganese = null;
+
+const argileMatch = text.match(/Argile\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
+const argile = argileMatch ? parseFloat(argileMatch[1].replace(',', '.')) : null;
+
+const sablesMatch = text.match(/Sables\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
+const sables = sablesMatch ? parseFloat(sablesMatch[1].replace(',', '.')) : null;
+
+const limonsMatch = text.match(/Limons\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
+const limons = limonsMatch ? parseFloat(limonsMatch[1].replace(',', '.')) : null;
 
     // 💾 4. Sauvegarde en base
     await supabase
       .from('soil_measurements')
       .insert({
         report_id: reportId,
-        ph_water: ph,
-        copper_cu_mg_kg: cuivre,
-        manganese_mn_mg_kg: manganese,
-        organic_matter_percent: mo,
-        cec_meq_kg: cec
+       ph_water: ph,
+copper_cu_mg_kg: cuivre,
+manganese_mn_mg_kg: manganese,
+organic_matter_percent: mo,
+cec_meq_kg: cec,
+clay_percent: argile,
+sand_percent: sables,
+silt_percent: limons
       });
 
     return NextResponse.json({
