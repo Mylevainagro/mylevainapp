@@ -201,13 +201,34 @@ const { data: insertedAnalyse, error: insertError } = await supabase
           visible: true,
         });
       } else {
-        setToast({
-          message: "Analyse sol enregistrée ✓",
-          type: "success",
-          visible: true,
-        });
-        setTimeout(() => router.push("/"), 1500);
-      }
+  const extractionResponse = await fetch("/api/extract-soil-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      analyseId: insertedAnalyse.id,
+      storagePath,
+    }),
+  });
+
+  const extractionResult = await extractionResponse.json();
+
+  if (!extractionResponse.ok) {
+    setToast({
+      message: "Analyse enregistrée, mais extraction PDF échouée : " + extractionResult.error,
+      type: "error",
+      visible: true,
+    });
+    return;
+  }
+
+  setToast({
+    message: "Analyse sol enregistrée et PDF extrait ✓",
+    type: "success",
+    visible: true,
+  });
+
+  setTimeout(() => router.push("/"), 1500);
+}
     } catch {
       setToast({
         message: "Erreur inattendue lors de l'enregistrement",

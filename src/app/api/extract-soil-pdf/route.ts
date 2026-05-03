@@ -8,109 +8,104 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function extractValue(text: string, label: string) {
-  const regex = new RegExp(label + '[^0-9]*([0-9]+[.,]?[0-9]*)', 'i');
-  const match = text.match(regex);
-  if (!match) return null;
-  return parseFloat(match[1].replace(',', '.'));
+function toNumber(value: string | undefined | null) {
+  if (!value) return null;
+  const n = Number(value.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
 }
 
-export async function GET() {
+function matchNumber(text: string, regex: RegExp) {
+  const m = text.match(regex);
+  return toNumber(m?.[1]);
+}
+
+export async function POST(req: Request) {
   try {
-    const reportId = 'dc17daf7-2d84-46fe-98cb-06666587099a';
+    const { analyseId, storagePath } = await req.json();
 
-    const { data: report } = await supabase
-      .from('soil_reports')
-      .select('*')
-      .eq('id', reportId)
-      .single();
-
-    if (!report) {
-      return NextResponse.json({ error: 'Report introuvable' }, { status: 404 });
+    if (!analyseId || !storagePath) {
+      return NextResponse.json(
+        { error: 'analyseId ou storagePath manquant' },
+        { status: 400 }
+      );
     }
 
-    // 📥 1. Télécharger le PDF
-const { data: file, error: downloadError } = await supabase.storage
-  .from('pdf-reports')
-  .download(report.storage_path);
+    const { data: file, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(storagePath);
 
-if (downloadError || !file) {
-  return NextResponse.json(
-    {
-      error: 'PDF introuvable',
-      storage_path: report.storage_path,
-      supabase_error: downloadError?.message || null
-    },
-    { status: 500 }
-  );
-}
+    if (downloadError || !file) {
+      return NextResponse.json(
+        {
+          error: 'PDF introuvable',
+          storagePath,
+          detail: downloadError?.message,
+        },
+        { status: 500 }
+      );
+    }
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // 📄 2. Lire le texte du PDF
-   const pdfParseModule: any = await import('pdf-parse/lib/pdf-parse.js');
-   const pdfParse = pdfParseModule.default || pdfParseModule;
+    const pdfParseModule: any = await import('pdf-parse/lib/pdf-parse.js');
+    const pdfParse = pdfParseModule.default || pdfParseModule;
 
-   const data = await pdfParse(buffer);
-   const text = data.text;
+    const parsed = await pdfParse(buffer);
+    const text = parsed.text as string;
 
-    console.log('PDF TEXT:', text);
+    const cuivre = matchNumber(
+      text,
+      /cuivre très élevée\s*\(?\s*([0-9]+[.,]?[0-9]*)\s*mg\/kg/i
+    );
 
-    // 🔍 3. Extraction des données
-  const ph = null;
+    const matiereOrganique = matchNumber(
+      text,
+      /MO\s*\n\s*([0-9]+[.,]?[0-9]*)%/i
+    );
 
-const cuivreMatch = text.match(/cuivre très élevée\s*\(?\s*([0-9]+[.,]?[0-9]*)\s*mg\/kg/i);
-const cuivre = cuivreMatch ? parseFloat(cuivreMatch[1].replace(',', '.')) : null;
+    const cec = matchNumber(
+      text,
+      /CEC moyenne de votre sol\s*\(?\s*([0-9]+[.,]?[0-9]*)\s*meq\/kg/i
+    );
 
-const moMatch = text.match(/MO\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
-const mo = moMatch ? parseFloat(moMatch[1].replace(',', '.')) : null;
+    const argile = matchNumber(text, /Argile\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
+    const sable = matchNumber(text, /Sables\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
+    const limon = matchNumber(text, /Limons\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
 
-const cecMatch = text.match(/CEC moyenne de votre sol\s*\(?\s*([0-9]+[.,]?[0-9]*)\s*meq\/kg/i);
-const cec = cecMatch ? parseFloat(cecMatch[1].replace(',', '.')) : null;
+    const { error: updateError } = await supabase
+      .from('analyses_sol')
+      .update({
+        cuivre_mg_kg: cuivre,
+        matiere_organique_pct: matiereOrganique,
+        cec_meq_kg: cec,
+        argile_pct: argile,
+        sable_pct: sable,
+        limon_pct: limon,
+        fichier_pdf_storage_path: storagePath,
+      })
+      .eq('id', analyseId);
 
-const manganese = null;
+    if (updateError) {
+      return NextResponse.json(
+        { error: updateError.message },
+        { status: 500 }
+      );
+    }
 
-const argileMatch = text.match(/Argile\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
-const argile = argileMatch ? parseFloat(argileMatch[1].replace(',', '.')) : null;
-
-const sablesMatch = text.match(/Sables\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
-const sables = sablesMatch ? parseFloat(sablesMatch[1].replace(',', '.')) : null;
-
-const limonsMatch = text.match(/Limons\s*\n\s*([0-9]+[.,]?[0-9]*)%/i);
-const limons = limonsMatch ? parseFloat(limonsMatch[1].replace(',', '.')) : null;
-
-    // 💾 4. Sauvegarde en base
-    await supabase
-      .from('soil_measurements')
-      .insert({
-        report_id: reportId,
-       ph_water: ph,
-copper_cu_mg_kg: cuivre,
-manganese_mn_mg_kg: manganese,
-organic_matter_percent: mo,
-cec_meq_kg: cec,
-clay_percent: argile,
-sand_percent: sables,
-silt_percent: limons
-      });
-
-return NextResponse.json({
-  success: true,
-  extracted: {
-    ph,
-    cuivre,
-    manganese,
-    mo,
-    cec,
-    argile,
-    sables,
-    limons
-  }
-});
-
+    return NextResponse.json({
+      success: true,
+      extracted: {
+        cuivre,
+        matiereOrganique,
+        cec,
+        argile,
+        sable,
+        limon,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message },
+      { error: error.message || 'Erreur serveur' },
       { status: 500 }
     );
   }
