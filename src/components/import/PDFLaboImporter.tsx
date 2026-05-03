@@ -184,13 +184,19 @@ export function PDFLaboImporter() {
       }
 
       // 3. Insert into analyses_sol
-      const { error: insertError } = await supabase
-        .from("analyses_sol")
-        .insert(record);
+   // 3. Insert into analyses_sol
+const { data: insertedAnalyse, error: insertError } = await supabase
+  .from("analyses_sol")
+  .insert({
+    ...record,
+    fichier_pdf_storage_path: storagePath,
+  })
+  .select()
+  .single();
 
-      if (insertError) {
+   if (insertError || !insertedAnalyse) {
         setToast({
-          message: "Erreur insertion : " + insertError.message,
+         message: "Erreur insertion : " + (insertError?.message || "analyse non créée"),
           type: "error",
           visible: true,
         });

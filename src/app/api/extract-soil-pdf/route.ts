@@ -94,16 +94,18 @@ sand_percent: sables,
 silt_percent: limons
       });
 
-    return NextResponse.json({
+return NextResponse.json({
   success: true,
   extracted: {
     ph,
     cuivre,
     manganese,
     mo,
-    cec
-  },
-  textPreview: text.slice(3000, 9000)
+    cec,
+    argile,
+    sables,
+    limons
+  }
 });
 
   } catch (error: any) {
