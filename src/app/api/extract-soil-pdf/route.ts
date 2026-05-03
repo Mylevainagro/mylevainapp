@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import pdf from 'pdf-parse';
+
+export const runtime = 'nodejs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,7 +41,10 @@ export async function GET() {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // 📄 2. Lire le texte du PDF
-    const data = await pdf(buffer);
+    const pdfParseModule: any = await import('pdf-parse');
+    const pdfParse = pdfParseModule.default || pdfParseModule;
+
+    const data = await pdfParse(buffer);
     const text = data.text;
 
     console.log('PDF TEXT:', text);
