@@ -76,15 +76,16 @@ if (downloadError || !file) {
       });
 
     return NextResponse.json({
-      success: true,
-      extracted: {
-        ph,
-        cuivre,
-        manganese,
-        mo,
-        cec
-      }
-    });
+  success: true,
+  extracted: {
+    ph,
+    cuivre,
+    manganese,
+    mo,
+    cec
+  },
+  textPreview: text.slice(0, 3000)
+});
 
   } catch (error: any) {
     return NextResponse.json(
