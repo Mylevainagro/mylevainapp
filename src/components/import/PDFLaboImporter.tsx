@@ -420,7 +420,10 @@ const { data: insertedAnalyse, error: insertError } = await supabase
       {/* Submit button */}
       {result && (
         <button
-          onClick={handleSubmit}
+  onClick={() => {
+    alert("clic bouton détecté");
+    handleSubmit();
+  }}
           disabled={saving}
           className="w-full bg-[#2d5016] text-white rounded-xl py-4 font-semibold text-lg shadow-md hover:bg-[#3a6b1e] disabled:opacity-50"
         >
