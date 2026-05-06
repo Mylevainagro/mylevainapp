@@ -20,14 +20,17 @@ interface AnalyseItem {
   parcelle_nom?: string;
 }
 
-interface ParcelleOption { id: string; nom: string; }
+interface ParcelleOption { id: string; nom: string; site_id: string | null; vignoble_id: string; }
+interface SiteOption { id: string; nom: string; }
 
 export default function ImportAnalyseSolPage() {
   const [analyses, setAnalyses] = useState<AnalyseItem[]>([]);
   const [parcelles, setParcelles] = useState<ParcelleOption[]>([]);
+  const [sites, setSites] = useState<SiteOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formSiteId, setFormSiteId] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean }>({ message: "", type: "success", visible: false });
   const hideToast = useCallback(() => setToast(t => ({ ...t, visible: false })), []);
 
@@ -61,11 +64,13 @@ export default function ImportAnalyseSolPage() {
   const [textureSol, setTextureSol] = useState("");
 
   async function loadAnalyses() {
-    const [{ data: anaData }, { data: parcData }] = await Promise.all([
+    const [{ data: anaData }, { data: parcData }, { data: siteData }] = await Promise.all([
       supabase.from("analyses_sol").select("id, parcelle_id, date_prelevement, phase, laboratoire, ph, matiere_organique_pct, fichier_pdf_url").order("date_prelevement", { ascending: false }),
-      supabase.from("parcelles").select("id, nom").order("nom"),
+      supabase.from("parcelles").select("id, nom, site_id, vignoble_id").order("nom"),
+      supabase.from("sites").select("id, nom").order("nom"),
     ]);
     if (parcData) setParcelles(parcData);
+    if (siteData) setSites(siteData);
     if (anaData) {
       const parcMap: Record<string, string> = {};
       for (const p of parcData ?? []) parcMap[p.id] = p.nom;
@@ -149,8 +154,12 @@ export default function ImportAnalyseSolPage() {
       {showForm && (
         <form onSubmit={handleSaveAnalyse} className="space-y-3 mb-6">
           <Section title="Identité" icon="🏷️" defaultOpen={true}>
-            <SelectField label="Parcelle *" value={parcelleId} onChange={setParcelleId}
-              options={parcelles.map(p => ({ value: p.id, label: p.nom }))} placeholder="Sélectionner" />
+            <SelectField label="Site *" value={formSiteId} onChange={(v) => { setFormSiteId(v); setParcelleId(""); }}
+              options={sites.map(s => ({ value: s.id, label: s.nom }))} placeholder="Sélectionner un site" />
+            {formSiteId && (
+              <SelectField label="Parcelle *" value={parcelleId} onChange={setParcelleId}
+                options={parcelles.filter(p => p.site_id === formSiteId || p.vignoble_id === formSiteId).map(p => ({ value: p.id, label: p.nom }))} placeholder="Sélectionner une parcelle" />
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">Date analyse *</label>
