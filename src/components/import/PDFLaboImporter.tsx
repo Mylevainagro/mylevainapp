@@ -39,12 +39,7 @@ export function PDFLaboImporter() {
     load();
   }, []);
 
-  const parcelles = vignoble
-    ? parcellesList.filter((p) => {
-        const selectedVignoble = vignoblesList.find((v) => v.nom === vignoble);
-        return selectedVignoble && p.vignoble_id === selectedVignoble.id;
-      })
-    : [];
+ const parcelles = parcellesList;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
@@ -217,14 +212,12 @@ export function PDFLaboImporter() {
           options={vignoblesList.map((v) => v.nom)}
         />
 
-        {parcelles.length > 0 && (
-          <SelectField
-            label="Parcelle"
-            value={parcelleId}
-            onChange={setParcelleId}
-            options={parcelles.map((p) => p.id)}
-          />
-        )}
+       <SelectField
+  label="Parcelle"
+  value={parcelleId}
+  onChange={setParcelleId}
+  options={parcelles.map((p) => p.id)}
+/>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
