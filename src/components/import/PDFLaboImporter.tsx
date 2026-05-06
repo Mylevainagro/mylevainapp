@@ -139,7 +139,16 @@ export function PDFLaboImporter() {
 
   // Submit: insert into analyses_sol + upload PDF to Supabase Storage
   async function handleSubmit() {
-    if (!parcelleId) {
+   console.log("HANDLE SUBMIT LANCÉ", {
+  parcelleId,
+  file,
+  result,
+  datePrelevement,
+  phase,
+  editedValues,
+});
+alert("Bouton Valider cliqué");
+ if (!parcelleId) {
       setToast({
         message: "Sélectionne un vignoble et une parcelle",
         type: "error",
@@ -229,13 +238,16 @@ const { data: insertedAnalyse, error: insertError } = await supabase
 
   setTimeout(() => router.push("/"), 1500);
 }
-    } catch {
-      setToast({
-        message: "Erreur inattendue lors de l'enregistrement",
-        type: "error",
-        visible: true,
-      });
-    } finally {
+    } catch (err: any) {
+  console.error("ERREUR HANDLE SUBMIT:", err);
+  alert("Erreur inattendue : " + (err?.message || JSON.stringify(err)));
+
+  setToast({
+    message: "Erreur inattendue : " + (err?.message || "voir console"),
+    type: "error",
+    visible: true,
+  });
+} finally {
       setSaving(false);
     }
   }
