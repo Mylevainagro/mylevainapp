@@ -12,10 +12,37 @@ import { ListSkeleton } from "@/components/Skeleton";
 interface SiteData { id: string; nom: string; localisation: string | null; type_exploitation: string | null; adresse: string | null; latitude: number | null; longitude: number | null; }
 interface ParcelleData { id: string; nom: string; variete: string | null; surface: number | null; sol: string | null; type_culture: string | null; latitude: number | null; longitude: number | null; annee_protocole: string | null; photo_url: string | null; plan_pdf_url: string | null; }
 interface PlacetteData { id: string; parcelle_id: string; nom: string; nb_ceps: number; modalite_id: string | null; }
-interface AnalyseData { id: string; parcelle_id: string; date_prelevement: string; phase: string; ph: number | null; matiere_organique_pct: number | null; score_sante_sol: number | null; cuivre_total: number | null; cuivre_biodisponible: number | null; biomasse_microbienne: number | null; fichier_pdf_url: string | null; azote_total: number | null; phosphore: number | null; potassium: number | null; calcium: number | null; magnesium: number | null; cec: number | null; rapport_c_n: number | null; manganese_total: number | null; laboratoire: string | null; }
+interface AnalyseData { id: string; parcelle_id: string; date_prelevement: string; phase: string; ph: number | null; matiere_organique_pct: number | null; score_sante_sol: number | null; cuivre_total: number | null; cuivre_biodisponible: number | null; biomasse_microbienne: number | null; fichier_pdf_url: string | null; azote_total: number | null; phosphore: number | null; potassium: number | null; calcium: number | null; magnesium: number | null; cec: number | null; rapport_c_n: number | null; manganese_total: number | null; cadmium_total: number | null; laboratoire: string | null; }
 interface RecoData { id: string; bbch_min: string; bbch_max: string; type: string; priorite: string; message: string; }
 
 function AnalyseSolCard({ analyse }: { analyse: AnalyseData }) {
+  // Calcul score métaux lourds (0-5, 0=propre, 5=très contaminé)
+  const scoreMetaux = (() => {
+    const scores: number[] = [];
+    if (analyse.cuivre_total != null) scores.push(Math.min(5, (analyse.cuivre_total / 100) * 5));
+    if (analyse.cadmium_total != null) scores.push(Math.min(5, (analyse.cadmium_total / 2) * 5));
+    if (analyse.manganese_total != null) scores.push(Math.min(5, (analyse.manganese_total / 500) * 5));
+    if (scores.length === 0) return null;
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10;
+  })();
+
+  // Calcul score vie du sol (0-5, 5=très vivant)
+  const scoreVie = (() => {
+    const scores: number[] = [];
+    if (analyse.biomasse_microbienne != null) scores.push(Math.min(5, (analyse.biomasse_microbienne / 600) * 5));
+    if (analyse.matiere_organique_pct != null) scores.push(Math.min(5, (analyse.matiere_organique_pct / 5) * 5));
+    if (analyse.rapport_c_n != null) {
+      const cnScore = analyse.rapport_c_n >= 8 && analyse.rapport_c_n <= 12 ? 5 : Math.max(0, 5 - Math.abs(analyse.rapport_c_n - 10) * 0.5);
+      scores.push(cnScore);
+    }
+    if (scores.length === 0) return null;
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10;
+  })();
+
+  // Couleur score métaux
+  const metauxColor = scoreMetaux == null ? "" : scoreMetaux <= 2 ? "text-emerald-700 bg-emerald-50" : scoreMetaux <= 3.5 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+  const vieColor = scoreVie == null ? "" : scoreVie >= 3.5 ? "text-emerald-700 bg-emerald-50" : scoreVie >= 2 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+
   return (
     <div className="glass rounded-2xl p-4 space-y-3">
       <div className="flex justify-between items-center">
@@ -33,6 +60,25 @@ function AnalyseSolCard({ analyse }: { analyse: AnalyseData }) {
           <span className="text-xs text-gray-400">{new Date(analyse.date_prelevement).toLocaleDateString("fr-FR")}</span>
         </div>
       </div>
+
+      {/* Scores calculés */}
+      {(scoreMetaux != null || scoreVie != null) && (
+        <div className="grid grid-cols-2 gap-2">
+          {scoreVie != null && (
+            <div className={`${vieColor} rounded-xl p-2.5 text-center`}>
+              <div className="text-lg font-bold">{scoreVie}/5</div>
+              <div className="text-[10px] font-medium">🌱 Vie du sol</div>
+            </div>
+          )}
+          {scoreMetaux != null && (
+            <div className={`${metauxColor} rounded-xl p-2.5 text-center`}>
+              <div className="text-lg font-bold">{scoreMetaux}/5</div>
+              <div className="text-[10px] font-medium">⚠️ Métaux lourds</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Indicateurs principaux */}
       <div className="grid grid-cols-4 gap-1.5 text-[10px]">
         {analyse.ph != null && <div className="bg-emerald-50 rounded-lg p-2 text-center"><div className="font-bold text-emerald-700">{analyse.ph}</div><div className="text-emerald-600">pH</div></div>}
@@ -43,6 +89,7 @@ function AnalyseSolCard({ analyse }: { analyse: AnalyseData }) {
       {/* Détails */}
       <div className="grid grid-cols-2 gap-x-4 text-[10px]">
         {analyse.cuivre_biodisponible != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Cu biodisponible</span><span className="font-medium">{analyse.cuivre_biodisponible} mg/kg</span></div>}
+        {analyse.cadmium_total != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Cadmium</span><span className="font-medium">{analyse.cadmium_total} mg/kg</span></div>}
         {analyse.manganese_total != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Manganèse</span><span className="font-medium">{analyse.manganese_total} mg/kg</span></div>}
         {analyse.azote_total != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Azote total</span><span className="font-medium">{analyse.azote_total}</span></div>}
         {analyse.phosphore != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Phosphore</span><span className="font-medium">{analyse.phosphore}</span></div>}
@@ -51,7 +98,6 @@ function AnalyseSolCard({ analyse }: { analyse: AnalyseData }) {
         {analyse.magnesium != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Magnésium</span><span className="font-medium">{analyse.magnesium}</span></div>}
         {analyse.rapport_c_n != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">C/N</span><span className="font-medium">{analyse.rapport_c_n}</span></div>}
         {analyse.biomasse_microbienne != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Biomasse microbienne</span><span className="font-medium">{analyse.biomasse_microbienne}</span></div>}
-        {analyse.score_sante_sol != null && <div className="flex justify-between py-0.5 border-b border-gray-50"><span className="text-gray-500">Score santé sol</span><span className="font-medium text-emerald-700">{analyse.score_sante_sol}/5</span></div>}
       </div>
     </div>
   );
@@ -276,7 +322,7 @@ export default function VignoblePage() {
         if (plData) setPlacettes(plData);
 
         // Load analyses
-        const { data: anaData } = await supabase.from("analyses_sol").select("id, parcelle_id, date_prelevement, phase, ph, matiere_organique_pct, score_sante_sol, cuivre_total, cuivre_biodisponible, biomasse_microbienne, fichier_pdf_url, azote_total, phosphore, potassium, calcium, magnesium, cec, rapport_c_n, manganese_total, laboratoire").in("parcelle_id", pIds).order("date_prelevement", { ascending: false });
+        const { data: anaData } = await supabase.from("analyses_sol").select("id, parcelle_id, date_prelevement, phase, ph, matiere_organique_pct, score_sante_sol, cuivre_total, cuivre_biodisponible, biomasse_microbienne, fichier_pdf_url, azote_total, phosphore, potassium, calcium, magnesium, cec, rapport_c_n, manganese_total, cadmium_total, laboratoire").in("parcelle_id", pIds).order("date_prelevement", { ascending: false });
         if (anaData) setAnalyses(anaData);
 
         // Load recommandations
