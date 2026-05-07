@@ -63,27 +63,46 @@ export function PDFLaboImporter() {
     if (!parcelleId) { setToast({ message: "Sélectionnez une parcelle", type: "error", visible: true }); return; }
 
     setSaving(true);
+    setMessage("Upload du PDF...");
     try {
-      // Upload PDF to Supabase Storage
+      // 1. Upload PDF to Supabase Storage
       const storagePath = `analyses-sol/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage.from("documents").upload(storagePath, file, { contentType: "application/pdf", upsert: false });
       if (uploadError) throw new Error("Erreur upload PDF : " + uploadError.message);
 
       const { data: urlData } = supabase.storage.from("documents").getPublicUrl(storagePath);
 
-      // Insert analyse record
-      const { error: insertError } = await supabase.from("analyses_sol").insert({
+      // 2. Insert analyse record and get ID
+      setMessage("Enregistrement de l'analyse...");
+      const { data: insertedAnalyse, error: insertError } = await supabase.from("analyses_sol").insert({
         parcelle_id: parcelleId,
         date_prelevement: datePrelevement,
         phase,
         fichier_pdf_url: urlData.publicUrl,
+      }).select("id").single();
+
+      if (insertError || !insertedAnalyse) throw new Error("Erreur insertion : " + (insertError?.message || "ID non retourné"));
+
+      // 3. Call extraction API to parse PDF and update values
+      setMessage("Extraction des valeurs du PDF...");
+      const extractRes = await fetch("/api/extract-soil-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analyseId: insertedAnalyse.id, storagePath }),
       });
+      const extractData = await extractRes.json();
 
-      if (insertError) throw new Error("Erreur insertion : " + insertError.message);
+      if (extractRes.ok && extractData.success) {
+        const vals = extractData.extracted || {};
+        const extracted = Object.entries(vals).filter(([, v]) => v != null);
+        setMessage(`✓ Extraction réussie : ${extracted.length} valeurs extraites (${extracted.map(([k, v]) => `${k}: ${v}`).join(", ")})`);
+        setToast({ message: `Analyse enregistrée + ${extracted.length} valeurs extraites ✓`, type: "success", visible: true });
+      } else {
+        setMessage(`Analyse enregistrée, extraction partielle : ${extractData.error || "certaines valeurs non détectées"}`);
+        setToast({ message: "Analyse enregistrée — extraction partielle", type: "success", visible: true });
+      }
 
-      setToast({ message: "Analyse enregistrée avec PDF ✓", type: "success", visible: true });
-      setMessage("Analyse enregistrée avec succès");
-      setTimeout(() => router.push("/import/analyse-sol"), 1500);
+      setTimeout(() => router.push("/import/analyse-sol"), 2000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erreur inattendue";
       setToast({ message: msg, type: "error", visible: true });

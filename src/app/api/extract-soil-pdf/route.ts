@@ -75,12 +75,9 @@ export async function POST(req: Request) {
     const { error: updateError } = await supabase
       .from('analyses_sol')
       .update({
-        cuivre_mg_kg: cuivre,
+        cuivre_total: cuivre,
         matiere_organique_pct: matiereOrganique,
-        cec_meq_kg: cec,
-        argile_pct: argile,
-        sable_pct: sable,
-        limon_pct: limon,
+        cec: cec,
         fichier_pdf_storage_path: storagePath,
       })
       .eq('id', analyseId);
