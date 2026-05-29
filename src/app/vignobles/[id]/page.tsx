@@ -265,7 +265,8 @@ export default function VignoblePage() {
   const [recos, setRecos] = useState<RecoData[]>([]);
   const [lastObsDates, setLastObsDates] = useState<Record<string, string>>({});
   const [lastTraitDates, setLastTraitDates] = useState<Record<string, string>>({});
-
+  const [siteTraitements, setSiteTraitements] = useState<{ id: string; parcelle_id: string; date: string; stade: string | null; nb_rangs: number | null; operateur: string | null }[]>([]);
+  const [traitLimit, setTraitLimit] = useState(3);
   useEffect(() => {
     if (isDemo) {
       // Demo mode
@@ -293,6 +294,7 @@ export default function VignoblePage() {
         const td: Record<string, string> = {};
         for (const t of DEMO_TRAITEMENTS) { if (!td[t.parcelle_id] || t.date > td[t.parcelle_id]) td[t.parcelle_id] = t.date; }
         setLastTraitDates(td);
+        setSiteTraitements(DEMO_TRAITEMENTS.slice(0, 10).map(t => ({ id: t.id, parcelle_id: t.parcelle_id, date: t.date, stade: t.stade, nb_rangs: t.nb_rangs, operateur: t.operateur })));
       }
       return;
     }
@@ -336,10 +338,11 @@ export default function VignoblePage() {
         setLastObsDates(od);
 
         // Load last trait dates
-        const { data: traitData } = await supabase.from("traitements").select("parcelle_id, date").in("parcelle_id", pIds).order("date", { ascending: false });
+        const { data: traitData } = await supabase.from("traitements").select("id, parcelle_id, date, stade, nb_rangs, operateur").in("parcelle_id", pIds).order("date", { ascending: false });
         const td: Record<string, string> = {};
         for (const t of (traitData ?? []) as { parcelle_id: string; date: string }[]) { if (!td[t.parcelle_id]) td[t.parcelle_id] = t.date; }
         setLastTraitDates(td);
+        if (traitData) setSiteTraitements(traitData);
       }
 
       setLoading(false);
@@ -419,32 +422,44 @@ export default function VignoblePage() {
         )}
       </div>
 
-      {/* ─── Séparateur ─── */}
-      <div className="border-t-2 border-emerald-100 my-6" />
+      {/* ─── SÉPARATEUR ─── */}
+      <div className="h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent my-8" />
 
-      {/* Dernier traitement */}
-      <h2 className="text-lg font-bold text-gray-800 mb-3">💧 Dernier traitement</h2>
-      {(() => {
-        const allDates = Object.entries(lastTraitDates);
-        if (allDates.length === 0) return <p className="text-xs text-gray-400 glass rounded-xl p-3 mb-6">Aucun traitement enregistré</p>;
-        const [lastParcId, lastDate] = allDates.sort((a, b) => b[1].localeCompare(a[1]))[0];
-        const lastParcelle = parcelles.find(p => p.id === lastParcId);
-        return (
-          <div className="glass rounded-2xl p-4 mb-6 space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-800">{lastParcelle?.nom || "—"}</span>
-              <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">{formatDate(lastDate)}</span>
-            </div>
-            <div className="flex gap-3 mt-2">
-              <Link href={`/parcelles/${lastParcId}`} className="text-[10px] text-blue-600 font-medium hover:underline">👁 Voir détail</Link>
-              <Link href={`/traitements/new?site=${id}&parcelle=${lastParcId}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Nouveau traitement</Link>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Derniers traitements */}
+      <h2 className="text-lg font-bold text-gray-800 mb-3">💧 Derniers traitements</h2>
+      {siteTraitements.length === 0 ? (
+        <p className="text-xs text-gray-400 glass rounded-xl p-3 mb-6">Aucun traitement enregistré</p>
+      ) : (
+        <div className="space-y-2 mb-6">
+          {siteTraitements.slice(0, traitLimit).map(t => {
+            const parcelle = parcelles.find(p => p.id === t.parcelle_id);
+            return (
+              <div key={t.id} className="glass rounded-xl p-3 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-medium text-gray-800">{parcelle?.nom || "—"}</span>
+                  <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{formatDate(t.date)}</span>
+                </div>
+                <div className="text-[10px] text-gray-500">
+                  {t.stade && `Stade ${t.stade} · `}{t.nb_rangs && `${t.nb_rangs} rangs · `}{t.operateur || ""}
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <Link href={`/traitements/${t.id}`} className="text-[10px] text-blue-600 font-medium hover:underline">👁 Détail</Link>
+                  <Link href={`/traitements/new?site=${id}&parcelle=${t.parcelle_id}&from=${t.id}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Reprendre</Link>
+                </div>
+              </div>
+            );
+          })}
+          {siteTraitements.length > traitLimit && (
+            <button type="button" onClick={() => setTraitLimit(prev => prev + 5)}
+              className="w-full glass rounded-xl py-2.5 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors">
+              💧 Voir plus ({siteTraitements.length - traitLimit} restants)
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* ─── Séparateur ─── */}
-      <div className="border-t-2 border-emerald-100 my-6" />
+      {/* ─── SÉPARATEUR ─── */}
+      <div className="h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent my-8" />
 
       {/* Analyses sol */}
       {analyses.length > 0 && (
@@ -456,8 +471,8 @@ export default function VignoblePage() {
         </>
       )}
 
-      {/* ─── Séparateur ─── */}
-      {analyses.length > 0 && <div className="border-t-2 border-emerald-100 my-6" />}
+      {/* ─── SÉPARATEUR ─── */}
+      {analyses.length > 0 && <div className="h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent my-8" />}
 
       {/* Recommandations stratégiques */}
       <RecommandationsStrategiques recos={recos} />
