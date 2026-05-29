@@ -43,6 +43,8 @@ export default function NewTraitementPage() {
   const prefillSite = searchParams.get("site") || "";
   const prefillParcelle = searchParams.get("parcelle") || "";
   const fromTraitId = searchParams.get("from") || "";
+  const editTraitId = searchParams.get("edit") || "";
+  const isEditMode = !!editTraitId;
 
   const [sitesList, setSitesList] = useState<SiteItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
@@ -113,13 +115,13 @@ export default function NewTraitementPage() {
   // 7. Notes
   const [notes, setNotes] = useState("");
 
-  // Load previous treatment data when "from" param is set
+  // Load previous treatment data when "from" or "edit" param is set
   useEffect(() => {
-    if (!fromTraitId || parcellesList.length === 0) return;
+    const loadId = editTraitId || fromTraitId;
+    if (!loadId || parcellesList.length === 0) return;
     async function loadFrom() {
-      const { data: t } = await supabase.from("traitements").select("*").eq("id", fromTraitId).single();
+      const { data: t } = await supabase.from("traitements").select("*").eq("id", loadId).single();
       if (!t) return;
-      // Pre-fill site
       const { data: p } = await supabase.from("parcelles").select("site_id, vignoble_id").eq("id", t.parcelle_id).single();
       if (p) setSiteId(p.site_id || p.vignoble_id || "");
       setParcelleId(t.parcelle_id || "");
@@ -136,9 +138,11 @@ export default function NewTraitementPage() {
       setPrelevementSol(t.prelevement_sol || false);
       setNotes(t.notes || "");
       if (t.heure) setHeure(t.heure);
+      if (!editTraitId) setDate(today); // Reprendre = nouvelle date
+      else setDate(t.date || today); // Modifier = garder la date
     }
     loadFrom();
-  }, [fromTraitId, parcellesList.length]);
+  }, [editTraitId, fromTraitId, parcellesList.length]);
 
   // Derived
   const parcelles = siteId ? parcellesList.filter(p => p.site_id === siteId || p.vignoble_id === siteId) : [];
@@ -178,7 +182,7 @@ export default function NewTraitementPage() {
     if (!parcelleId || !date) { setToast({ message: "Parcelle et date obligatoires", type: "error", visible: true }); return; }
     setSaving(true);
 
-    const { data: traitData, error } = await supabase.from("traitements").insert({
+    const payload = {
       parcelle_id: parcelleId, date, rang: selectedParcelle?.nb_rangs || 0, modalite: "",
       produit: "", dose: null, methode_application: typeApplication || null,
       temperature, humidite, conditions_meteo: couvert || null, operateur: operateur || null,
@@ -188,13 +192,27 @@ export default function NewTraitementPage() {
       volume_bouillie_l: volumeCible, ph_eau: phEau, ph_bouillie: phBouillieGlobal,
       origine_eau: origineEau || null, mode: "rang", nb_rangs: selectedParcelle?.nb_rangs || null,
       surface_ha: selectedParcelle?.surface || null, heure: heure || null, latitude, longitude,
-    }).select("id").single();
+    };
 
-    if (error || !traitData) { setSaving(false); setToast({ message: "Erreur : " + (error?.message ?? ""), type: "error", visible: true }); return; }
+    let traitId: string;
+
+    if (isEditMode) {
+      // UPDATE existing
+      const { error } = await supabase.from("traitements").update(payload).eq("id", editTraitId);
+      if (error) { setSaving(false); setToast({ message: "Erreur : " + error.message, type: "error", visible: true }); return; }
+      traitId = editTraitId;
+      // Delete old rangs and re-insert
+      await supabase.from("traitement_rangs").delete().eq("traitement_id", editTraitId);
+    } else {
+      // INSERT new
+      const { data: traitData, error } = await supabase.from("traitements").insert(payload).select("id").single();
+      if (error || !traitData) { setSaving(false); setToast({ message: "Erreur : " + (error?.message ?? ""), type: "error", visible: true }); return; }
+      traitId = traitData.id;
+    }
 
     // Save rang details
     const rangRecords = rangTraitData.filter(r => !r.temoin).map(r => ({
-      traitement_id: traitData.id, rang: `R${r.rang}`, modalite_id: r.modalite_code,
+      traitement_id: traitId, rang: `R${r.rang}`, modalite_id: r.modalite_code,
       dose: r.dose1_lha || null,
       commentaire: [
         r.p1_volume_prepare ? `P1: Préparé ${r.p1_volume_prepare}L | pH ${r.p1_ph_bouillie ?? "?"} | Restant ${r.p1_volume_restant ?? "?"}L` : "",
@@ -204,13 +222,13 @@ export default function NewTraitementPage() {
     if (rangRecords.length > 0) await supabase.from("traitement_rangs").insert(rangRecords);
 
     setSaving(false);
-    setToast({ message: "Traitement enregistré ✓", type: "success", visible: true });
+    setToast({ message: isEditMode ? "Traitement modifié ✓" : "Traitement enregistré ✓", type: "success", visible: true });
     setTimeout(() => router.push("/traitements"), 1000);
   }
 
   return (
     <div>
-      <h1 className="text-xl font-bold gradient-text mb-4">🧪 Nouveau traitement</h1>
+      <h1 className="text-xl font-bold gradient-text mb-4">{isEditMode ? "✏️ Modifier traitement" : "🧪 Nouveau traitement"}</h1>
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       <form onSubmit={handleSubmit} className="space-y-3">
 
@@ -390,7 +408,7 @@ export default function NewTraitementPage() {
               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               Enregistrement...
             </span>
-          ) : "💾 Sauvegarder le traitement"}
+          ) : isEditMode ? "✏️ Mettre à jour le traitement" : "💾 Sauvegarder le traitement"}
         </button>
       </form>
     </div>
