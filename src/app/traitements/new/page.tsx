@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Section } from "@/components/ui/Section";
 import { SelectField } from "@/components/ui/SelectField";
 import { NumberField } from "@/components/ui/NumberField";
@@ -228,6 +229,13 @@ export default function NewTraitementPage() {
 
   return (
     <div>
+      {/* Fil d'Ariane */}
+      <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-3 flex-wrap">
+        <Link href="/" className="hover:text-emerald-600">🏡 Accueil</Link>
+        <span>›</span>
+        {siteId && <><Link href={`/vignobles/${siteId}`} className="hover:text-emerald-600">{sitesList.find(s => s.id === siteId)?.nom || "Site"}</Link><span>›</span></>}
+        <span className="text-gray-700 font-medium">{isEditMode ? "Reprendre traitement" : "Nouveau traitement"}</span>
+      </nav>
       <h1 className="text-xl font-bold gradient-text mb-4">{isEditMode ? "🔄 Reprendre traitement" : "🧪 Nouveau traitement"}</h1>
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       <form onSubmit={handleSubmit} className="space-y-3">

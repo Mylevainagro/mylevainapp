@@ -445,6 +445,12 @@ export default function VignoblePage() {
                 <div className="flex gap-3 pt-1">
                   <Link href={`/traitements/${t.id}`} className="text-[10px] text-blue-600 font-medium hover:underline">👁 Détail</Link>
                   <Link href={`/traitements/new?site=${id}&parcelle=${t.parcelle_id}&edit=${t.id}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Reprendre</Link>
+                  <button type="button" onClick={async () => {
+                    if (!confirm("Supprimer ce traitement ?")) return;
+                    await supabase.from("traitement_rangs").delete().eq("traitement_id", t.id);
+                    await supabase.from("traitements").delete().eq("id", t.id);
+                    setSiteTraitements(prev => prev.filter(x => x.id !== t.id));
+                  }} className="text-[10px] text-red-500 font-medium hover:underline">🗑 Supprimer</button>
                 </div>
               </div>
             );
