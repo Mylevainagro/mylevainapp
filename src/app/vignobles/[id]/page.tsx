@@ -444,8 +444,7 @@ export default function VignoblePage() {
                 </div>
                 <div className="flex gap-3 pt-1">
                   <Link href={`/traitements/${t.id}`} className="text-[10px] text-blue-600 font-medium hover:underline">👁 Détail</Link>
-                  <Link href={`/traitements/new?site=${id}&parcelle=${t.parcelle_id}&edit=${t.id}`} className="text-[10px] text-emerald-700 font-medium hover:underline">✏️ Modifier</Link>
-                  <Link href={`/traitements/new?site=${id}&parcelle=${t.parcelle_id}&from=${t.id}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Reprendre</Link>
+                  <Link href={`/traitements/new?site=${id}&parcelle=${t.parcelle_id}&edit=${t.id}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Reprendre</Link>
                 </div>
               </div>
             );

@@ -125,7 +125,7 @@ export default function TraitementDetailPage() {
 
       {/* Actions */}
       <div className="flex items-center gap-3 mt-4">
-        <Link href={`/traitements/new?site=${siteId}&parcelle=${trait.parcelle_id}&from=${trait.id}`} className="flex-1 text-center text-sm font-medium py-3 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">🔄 Reprendre</Link>
+        <Link href={`/traitements/new?site=${siteId}&parcelle=${trait.parcelle_id}&edit=${trait.id}`} className="flex-1 text-center text-sm font-medium py-3 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">🔄 Reprendre</Link>
         <button onClick={handleDelete} className="flex-1 text-center text-sm font-medium py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors">🗑 Supprimer</button>
       </div>
     </div>

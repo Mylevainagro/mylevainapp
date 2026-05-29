@@ -259,7 +259,7 @@ export default function TraitementsPage() {
                         className="text-xs text-gray-600 font-medium px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                         📍 Parcelle
                       </Link>
-                      <Link href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}&from=${t.id}`}
+                      <Link href={`/traitements/new?site=${parcelleInfo[t.parcelle_id]?.site_id || ""}&parcelle=${t.parcelle_id}&edit=${t.id}`}
                         className="text-xs text-amber-700 font-medium px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors">
                         🔄 Reprendre
                       </Link>

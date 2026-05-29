@@ -228,7 +228,7 @@ export default function NewTraitementPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold gradient-text mb-4">{isEditMode ? "✏️ Modifier traitement" : "🧪 Nouveau traitement"}</h1>
+      <h1 className="text-xl font-bold gradient-text mb-4">{isEditMode ? "🔄 Reprendre traitement" : "🧪 Nouveau traitement"}</h1>
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onClose={hideToast} />
       <form onSubmit={handleSubmit} className="space-y-3">
 
@@ -408,7 +408,7 @@ export default function NewTraitementPage() {
               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               Enregistrement...
             </span>
-          ) : isEditMode ? "✏️ Mettre à jour le traitement" : "💾 Sauvegarder le traitement"}
+          ) : isEditMode ? "💾 Mettre à jour le traitement" : "💾 Sauvegarder le traitement"}
         </button>
       </form>
     </div>
