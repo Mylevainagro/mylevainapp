@@ -419,6 +419,33 @@ export default function VignoblePage() {
         )}
       </div>
 
+      {/* ─── Séparateur ─── */}
+      <div className="border-t-2 border-emerald-100 my-6" />
+
+      {/* Dernier traitement */}
+      <h2 className="text-lg font-bold text-gray-800 mb-3">💧 Dernier traitement</h2>
+      {(() => {
+        const allDates = Object.entries(lastTraitDates);
+        if (allDates.length === 0) return <p className="text-xs text-gray-400 glass rounded-xl p-3 mb-6">Aucun traitement enregistré</p>;
+        const [lastParcId, lastDate] = allDates.sort((a, b) => b[1].localeCompare(a[1]))[0];
+        const lastParcelle = parcelles.find(p => p.id === lastParcId);
+        return (
+          <div className="glass rounded-2xl p-4 mb-6 space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-800">{lastParcelle?.nom || "—"}</span>
+              <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">{formatDate(lastDate)}</span>
+            </div>
+            <div className="flex gap-3 mt-2">
+              <Link href={`/parcelles/${lastParcId}`} className="text-[10px] text-blue-600 font-medium hover:underline">👁 Voir détail</Link>
+              <Link href={`/traitements/new?site=${id}&parcelle=${lastParcId}`} className="text-[10px] text-amber-700 font-medium hover:underline">🔄 Nouveau traitement</Link>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── Séparateur ─── */}
+      <div className="border-t-2 border-emerald-100 my-6" />
+
       {/* Analyses sol */}
       {analyses.length > 0 && (
         <>
@@ -428,6 +455,9 @@ export default function VignoblePage() {
           </div>
         </>
       )}
+
+      {/* ─── Séparateur ─── */}
+      {analyses.length > 0 && <div className="border-t-2 border-emerald-100 my-6" />}
 
       {/* Recommandations stratégiques */}
       <RecommandationsStrategiques recos={recos} />

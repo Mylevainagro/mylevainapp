@@ -115,7 +115,7 @@ export default function NewTraitementPage() {
 
   // Load previous treatment data when "from" param is set
   useEffect(() => {
-    if (!fromTraitId) return;
+    if (!fromTraitId || parcellesList.length === 0) return;
     async function loadFrom() {
       const { data: t } = await supabase.from("traitements").select("*").eq("id", fromTraitId).single();
       if (!t) return;
@@ -135,9 +135,10 @@ export default function NewTraitementPage() {
       setTypeApplication(t.type_application || "");
       setPrelevementSol(t.prelevement_sol || false);
       setNotes(t.notes || "");
+      if (t.heure) setHeure(t.heure);
     }
     loadFrom();
-  }, [fromTraitId]);
+  }, [fromTraitId, parcellesList.length]);
 
   // Derived
   const parcelles = siteId ? parcellesList.filter(p => p.site_id === siteId || p.vignoble_id === siteId) : [];
