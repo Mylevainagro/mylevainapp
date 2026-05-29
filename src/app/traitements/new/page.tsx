@@ -42,6 +42,7 @@ export default function NewTraitementPage() {
   const now = new Date().toTimeString().slice(0, 5);
   const prefillSite = searchParams.get("site") || "";
   const prefillParcelle = searchParams.get("parcelle") || "";
+  const fromTraitId = searchParams.get("from") || "";
 
   const [sitesList, setSitesList] = useState<SiteItem[]>([]);
   const [parcellesList, setParcellesList] = useState<ParcelleItem[]>([]);
@@ -111,6 +112,32 @@ export default function NewTraitementPage() {
 
   // 7. Notes
   const [notes, setNotes] = useState("");
+
+  // Load previous treatment data when "from" param is set
+  useEffect(() => {
+    if (!fromTraitId) return;
+    async function loadFrom() {
+      const { data: t } = await supabase.from("traitements").select("*").eq("id", fromTraitId).single();
+      if (!t) return;
+      // Pre-fill site
+      const { data: p } = await supabase.from("parcelles").select("site_id, vignoble_id").eq("id", t.parcelle_id).single();
+      if (p) setSiteId(p.site_id || p.vignoble_id || "");
+      setParcelleId(t.parcelle_id || "");
+      setStadeBbch(t.stade || "");
+      setOperateur(t.operateur || "");
+      setVolumeCible(t.volume_bouillie_l);
+      setPhEau(t.ph_eau);
+      setOrigineEau(t.origine_eau || "");
+      setTemperature(t.temperature);
+      setHumidite(t.humidite);
+      setVent(t.conditions_meteo || "");
+      setCouvert(t.couvert || "");
+      setTypeApplication(t.type_application || "");
+      setPrelevementSol(t.prelevement_sol || false);
+      setNotes(t.notes || "");
+    }
+    loadFrom();
+  }, [fromTraitId]);
 
   // Derived
   const parcelles = siteId ? parcellesList.filter(p => p.site_id === siteId || p.vignoble_id === siteId) : [];

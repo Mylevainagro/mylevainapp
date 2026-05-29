@@ -122,10 +122,8 @@ export function PDFLaboImporter() {
         <SelectField label="Site" value={siteId} onChange={(v) => { setSiteId(v); setParcelleId(""); }}
           options={sitesList.map(s => ({ value: s.id, label: s.nom }))} placeholder="Sélectionner un site" />
 
-        {filteredParcelles.length > 0 && (
-          <SelectField label="Parcelle" value={parcelleId} onChange={setParcelleId}
-            options={filteredParcelles.map(p => ({ value: p.id, label: p.nom }))} placeholder="Sélectionner une parcelle" />
-        )}
+        <SelectField label="Parcelle" value={parcelleId} onChange={setParcelleId}
+          options={filteredParcelles.map(p => ({ value: p.id, label: p.nom }))} placeholder="Sélectionner une parcelle" />
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
