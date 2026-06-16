@@ -133,7 +133,7 @@ export default function NewTraitementPage() {
       setOrigineEau(t.origine_eau || "");
       setTemperature(t.temperature);
       setHumidite(t.humidite);
-      setVent(t.conditions_meteo || "");
+      setVent(t.vent || t.conditions_meteo || "");
       setCouvert(t.couvert || "");
       setTypeApplication(t.type_application || "");
       setPrelevementSol(t.prelevement_sol || false);
@@ -141,6 +141,24 @@ export default function NewTraitementPage() {
       if (t.heure) setHeure(t.heure);
       if (!editTraitId) setDate(today); // Reprendre = nouvelle date
       else setDate(t.date || today); // Modifier = garder la date
+      // Load rang details with volumes
+      const { data: rangData } = await supabase.from("traitement_rangs").select("rang, modalite_id, dose, p1_volume_prepare, p1_ph_bouillie, p1_volume_restant, p2_volume_prepare, p2_ph_bouillie, p2_volume_restant").eq("traitement_id", loadId).order("rang");
+      if (rangData && rangData.length > 0) {
+        setRangTraitData(prev => prev.map(r => {
+          const saved = rangData.find(rd => rd.rang === `R${r.rang}`);
+          if (!saved) return r;
+          return {
+            ...r,
+            p1_volume_prepare: saved.p1_volume_prepare,
+            p1_ph_bouillie: saved.p1_ph_bouillie,
+            p1_volume_restant: saved.p1_volume_restant,
+            p2_volume_prepare: saved.p2_volume_prepare,
+            p2_ph_bouillie: saved.p2_ph_bouillie,
+            p2_volume_restant: saved.p2_volume_restant,
+            nb_produits: saved.p2_volume_prepare ? 2 : r.nb_produits,
+          } as RangTraitData;
+        }));
+      }
     }
     loadFrom();
   }, [editTraitId, fromTraitId, parcellesList.length]);
@@ -189,7 +207,7 @@ export default function NewTraitementPage() {
       temperature, humidite, conditions_meteo: couvert || null, operateur: operateur || null,
       notes: notes || null, campagne: new Date().getFullYear().toString(),
       stade: stadeBbch || null, zone_traitee_type: "rang", type_application: typeApplication || null,
-      prelevement_sol: prelevementSol, couvert: couvert || null,
+      prelevement_sol: prelevementSol, couvert: couvert || null, vent: vent || null,
       volume_bouillie_l: volumeCible, ph_eau: phEau, ph_bouillie: phBouillieGlobal,
       origine_eau: origineEau || null, mode: "rang", nb_rangs: selectedParcelle?.nb_rangs || null,
       surface_ha: selectedParcelle?.surface || null, heure: heure || null, latitude, longitude,
@@ -215,10 +233,13 @@ export default function NewTraitementPage() {
     const rangRecords = rangTraitData.filter(r => !r.temoin).map(r => ({
       traitement_id: traitId, rang: `R${r.rang}`, modalite_id: r.modalite_code,
       dose: r.dose1_lha || null,
-      commentaire: [
-        r.p1_volume_prepare ? `P1: Préparé ${r.p1_volume_prepare}L | pH ${r.p1_ph_bouillie ?? "?"} | Restant ${r.p1_volume_restant ?? "?"}L` : "",
-        r.nb_produits === 2 && r.p2_volume_prepare ? `P2: Préparé ${r.p2_volume_prepare}L | pH ${r.p2_ph_bouillie ?? "?"} | Restant ${r.p2_volume_restant ?? "?"}L` : "",
-      ].filter(Boolean).join(" | ") || null,
+      p1_volume_prepare: r.p1_volume_prepare,
+      p1_ph_bouillie: r.p1_ph_bouillie,
+      p1_volume_restant: r.p1_volume_restant,
+      p2_volume_prepare: r.nb_produits === 2 ? r.p2_volume_prepare : null,
+      p2_ph_bouillie: r.nb_produits === 2 ? r.p2_ph_bouillie : null,
+      p2_volume_restant: r.nb_produits === 2 ? r.p2_volume_restant : null,
+      commentaire: null,
     }));
     if (rangRecords.length > 0) await supabase.from("traitement_rangs").insert(rangRecords);
 
